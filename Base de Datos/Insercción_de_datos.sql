@@ -1,3 +1,5 @@
+USE Proyecto_Final;
+
 INSERT INTO Profesores (dni, nombre, apellidos, email, puntos_guardia, perfil) VALUES
 ('P001', 'Enrique', 'del Rosal', 'enrique.delrosal@iesciudadjardin.com', 0, 'Profesorado'),
 ('P002', 'Irene', 'Merlini', 'irene.merlini@iesciudadjardin.com', 0, 'Profesorado'),
@@ -39,3 +41,55 @@ INSERT INTO Profesores (dni, nombre, apellidos, email, puntos_guardia, perfil) V
 ('P038', 'Mª José', 'Fernández', 'mjose.fernandez@iesciudadjardin.com', 0, 'Profesorado'),
 ('P039', 'Diego', 'Núñez', 'diego.nunez@iesciudadjardin.com', 0, 'Profesorado');
 
+INSERT INTO Grupos (nombre_Grupo) VALUES
+('ESO 1ª A'),
+('ESO 1ª B'),
+('ESO 1ª C'),
+('ESO 1ª D'),
+('ESO 1ª E'),
+('ESO 2ª A'),
+('ESO 2ª B'),
+('ESO 2ª C'),
+('ESO 2ª D'),
+('ESO 2ª E'),
+('ESO 2ª F'),
+('ESO 3ª A'),
+('ESO 3ª B'),
+('ESO 3ª C'),
+('ESO 3ª D'),
+('ESO 3ª E'),
+('ESO 4ª A'),
+('ESO 4ª B'),
+('ESO 4ª C'),
+('ESO 4ª D'),
+('ESO 4ª E'),
+('BACH 1º A Ciencias y Tecnología'),
+('BACH 1º B Ciencias y Tecnología'),
+('BACH 1º C Ciencias y Tecnología'),
+('BACH 2º A Ciencias y Tecnología'),
+('BACH 2º B Ciencias y Tecnología'),
+('BACH 2º C Ciencias y Tecnología'),
+('BACH 1º A Humanidades y Ciencias Sociales'),
+('BACH 1º B Humanidades y Ciencias Sociales'),
+('BACH 1º C Humanidades y Ciencias Sociales'),
+('BACH 2º A Humanidades y Ciencias Sociales'),
+('BACH 2º B Humanidades y Ciencias Sociales'),
+('BACH 2º C Humanidades y Ciencias Sociales'),
+('1º SMR'),
+('2º SMR'),
+('1º ASIR'),
+('2º ASIR'),
+('1º IC'),
+('2º IC');
+
+SELECT * FROM Grupos;
+
+INSERT INTO Horarios (dni_profesor,dia,tramo_horario,id_grupo_horario, aula) VALUES ('P001','Lunes','08:15-09:15',13,17);
+INSERT INTO Horarios (dni_profesor,dia,tramo_horario)
+
+INSERT INTO Guardias(dni_profesor,dia,tramo_horario) VALUES
+('P001','Lunes','09:15-10:15'),
+();
+
+
+SELECT * FROM Grupos;
