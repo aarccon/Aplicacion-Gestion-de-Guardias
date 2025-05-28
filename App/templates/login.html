@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Iniciar sesión</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
+</head>
+<body>
+    <div class="banner">
+        <img class="logo" src="{{ url_for('static', filename='img/logo_Aplicacion.png') }}" alt="Logo Aplicación">
+        <img class="logo" src="{{ url_for('static', filename='img/logo_Instituto.png') }}" alt="Logo Instituto">
+    </div>
+
+    <main class="login-container">
+        <div class="login-box">
+            <h1>GestGuardias</h1>
+            <h2>Iniciar sesión</h2>
+            {% if mensaje %}
+                <p class="error">{{ mensaje }}</p>
+            {% endif %}
+            <form action="{{ url_for('login') }}" method="post">
+                <label for="dni">DNI:</label>
+                <input type="text" id="dni" name="dni" required>
+
+                <label for="password">Contraseña:</label>
+                <input type="password" id="password" name="password" required>
+
+                <button type="submit">Entrar</button>
+            </form>
+        </div>
+    </main>
+</body>
+</html>

@@ -4,133 +4,137 @@ CREATE DATABASE Proyecto_Final;
 
 USE Proyecto_Final;
 
-/** Tabla Profesores que almacenara el dni del profesor, el nombre, apellidos, email y 
-    puntos de guardia que va a tener el profesor y el perfil que tiene si es Profesor o Directivo**/
+/** Tabla Perfiles en la cual almacenara información de los diferentes perfiles que van a ser que pueden ser o profesorado o directivo **/
 
-CREATE TABLE Profesores (
-    dni VARCHAR(9) PRIMARY KEY, -- Almacena el DNI del profesor como clave primaria
+	CREATE TABLE Perfiles (
+		id_perfil INT AUTO_INCREMENT PRIMARY KEY,
+		nombre VARCHAR(50) UNIQUE NOT NULL
+	);
+
+/** Tabla Profesores en la cual se almacena el dni del profesor como llave primaria los nombre y los apellidos el correo para en un futuro realizar un logeo, 
+	los puntos para gestionar la guardia y el perfil que contiene cada profesor **/
+    
+	CREATE TABLE Profesores (
+    dni VARCHAR(9) PRIMARY KEY,
     nombre VARCHAR(100) NOT NULL,
     apellidos VARCHAR(150) NOT NULL,
-    email VARCHAR(100) UNIQUE NOT NULL, -- Indicamos el email del profesor para en un futuro sera con el que se logeara en la aplicación
+    email VARCHAR(100) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
     puntos_guardia INT DEFAULT 0,
-    perfil ENUM('Profesorado', 'Directivo') NOT NULL
-);
+    id_perfil_profesores INT NOT NULL,
+    FOREIGN KEY (id_perfil_profesores) REFERENCES Perfiles(id_perfil)
+	);
 
-/** Tabla Grupos en la cual se almacenara un identificador que se va a ir autoincrementando y el nombre del curso **/ 
+/** Tabla Grupos en el cual se almacenara el id del grupo y el nombre que contiene cada grupo. **/
 
-CREATE TABLE Grupos (
-    id_Grupo INT AUTO_INCREMENT PRIMARY KEY, -- Identificador del grupo
-    nombre_Grupo VARCHAR(50) NOT NULL UNIQUE -- Nombre del grupo
-);
+	CREATE TABLE Grupos (
+		id_grupo INT AUTO_INCREMENT PRIMARY KEY,
+		nombre VARCHAR(50) UNIQUE NOT NULL
+	);
 
-/** Tabla Horarios en la cual se asignara cada horario del profesor se indentificara que los valores que se introduzca en la base de datos sea de Lunes
-    a Viernes y que el tramo de horario es dentro del que hay establecido en el instituto **/
+/** Tabla Días de la semana, en la cual almacenara los días de la semana que hay dando clase por si en un futuro no hay clase un día como por ejemplo un Viernes y es de Lunes a Jueves, 
+	en vez de realizar un ENUM en cada tabla realizo esta tabla y así es mas facil modificar los datos en un futuro **/
 
-CREATE TABLE Horarios (
-    id_horario INT AUTO_INCREMENT PRIMARY KEY, -- Identificador de cada horario que introduzcamos
-    dni_profesor VARCHAR(9) NOT NULL, -- Identificador del profesor
-    dia ENUM('Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes') NOT NULL, -- Comprobamos que los días del horario solamente sean de Lunes a Viernes y no otro día
-    tramo_horario ENUM(
-        '08:15-09:15',
-        '09:15-10:15',
-        '10:15-11:15',
-        '11:15-11:45',
-        '11:45-12:45',
-        '12:45-13:45',
-        '13:45-14:45'
-    ) NOT NULL, -- Comprobamos que los horas del horario solamente sean dentro del horario escolar y no otra hora del día
-    id_grupo_horario INT NOT NULL, -- Indicamos el id del grupo.
-    aula VARCHAR(50) NOT NULL, -- Indicamos el aula en el que se esta realizando este horario
-    UNIQUE (dni_profesor, dia, tramo_horario),
-    FOREIGN KEY (dni_profesor) REFERENCES Profesores(dni),
-    FOREIGN KEY (id_grupo_horario) REFERENCES Grupos(id_Grupo)
-);
+	CREATE TABLE Dias_Semana (
+		id_dia INT AUTO_INCREMENT PRIMARY KEY,
+		nombre VARCHAR(10) UNIQUE NOT NULL
+	);
 
+/** Tabla Tramos Horarios en el cual almacenara los horarios que hay en el instituto esto lo realizo para que no haya que modificarlo en todas las tablas 
+	y se modifique nada más que en esta **/
 
-/** Tabla Guardias en la cual almacenaremos la información de las guardias que tiene cada profesor sucede lo mismo que la tabla horarios comprobamos las horas y el día**/
+	CREATE TABLE Tramos_Horarios (
+		id_tramo INT AUTO_INCREMENT PRIMARY KEY,
+		horario VARCHAR(20) UNIQUE NOT NULL
+	);
 
-CREATE TABLE Guardias (
-    id_Guardia INT AUTO_INCREMENT PRIMARY KEY,
-    dni_profesor VARCHAR(9) NOT NULL,
-    dia ENUM('Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes') NOT NULL, -- Comprobamos que los días del horario solamente sean de Lunes a Viernes y no otro día
-    tramo_horario ENUM(
-        '08:15-09:15',
-        '09:15-10:15',
-        '10:15-11:15',
-        '11:15-11:45',
-        '11:45-12:45',
-        '12:45-13:45',
-        '13:45-14:45'
-    ) NOT NULL, -- Comprobamos que los horas de las guardias que se asignen solamente sean dentro del horario escolar y no otra hora del día
-    aula_zona VARCHAR(50) NOT NULL,
-    UNIQUE (dni_profesor, dia, tramo_horario),
-    FOREIGN KEY (dni_profesor) REFERENCES Profesores(dni)
-);
+/** Tabla Asignaturas en la cual se almacenara la información de cada asignatura **/
 
-/** Tabla Ausencias en la cual se indicara las ausencias de cada profesor que ha faltado, comprobaremos como se ha venido realizando en las dos tablas anteriormente 
-    que las Ausencias se indique en el tramo de horario correspondiente **/
+    CREATE TABLE Asignaturas (
+    id_asignatura INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(100) UNIQUE NOT NULL
+	);
 
+/** Tabla Horarios en la cual almacenara todos los horarios de cada profesor la clave primaria sera un identificador que sera auto incremental, 
+	el dni del profesor para ver cada hora que tiene asignado cada profesor, el id del díua en el cual se realiza la hora, el tramo de horario en el cual realiza la hora y el id del grupo
+    con el que va a dar clase, ponemos una restricción que la combinación del dni del profesor, el id del dia y el id del tramo horario no se pueda repetir, pongo como clave 
+    foranea el dni del profesor, el id del día, el id del tramo horario, el id del grupo y el id de la asignatura **/
+
+	CREATE TABLE Horarios (
+		id_horario INT AUTO_INCREMENT PRIMARY KEY,
+		dni_profesor_horarios VARCHAR(9) NOT NULL,
+		id_dia_horarios INT NOT NULL,
+		id_tramo_horarios INT NOT NULL,
+		id_grupo_horarios INT,
+        id_asignatura_horarios INT NOT NULL,
+		aula VARCHAR(50),
+		UNIQUE (dni_profesor_horarios, id_dia_horarios, id_tramo_horarios),
+		FOREIGN KEY (dni_profesor_horarios) REFERENCES Profesores(dni) ON DELETE CASCADE,
+		FOREIGN KEY (id_dia_horarios) REFERENCES Dias_Semana(id_dia),
+		FOREIGN KEY (id_tramo_horarios) REFERENCES Tramos_Horarios(id_tramo),
+		FOREIGN KEY (id_grupo_horarios) REFERENCES Grupos(id_grupo),
+        FOREIGN KEY (id_asignatura_horarios) REFERENCES Asignaturas(id_asignatura)
+	);
+
+/** Tabla Guardias almacenara las guardias que se realicen cada guardia que se realice almacenara **/
+
+	CREATE TABLE Guardias (
+		id_guardia INT AUTO_INCREMENT PRIMARY KEY,
+		dni_profesor_guardias VARCHAR(9) NOT NULL,
+		id_dia_guardias INT NOT NULL,
+		id_tramo_guardias INT NOT NULL,
+		aula_zona VARCHAR(50),
+		UNIQUE (dni_profesor_guardias, id_dia_guardias, id_tramo_guardias),
+		FOREIGN KEY (dni_profesor_guardias) REFERENCES Profesores(dni) ON DELETE CASCADE,
+		FOREIGN KEY (id_dia_guardias) REFERENCES Dias_Semana(id_dia),
+		FOREIGN KEY (id_tramo_guardias) REFERENCES Tramos_Horarios(id_tramo)
+	);
+
+-- Tabla Ausencias
 CREATE TABLE Ausencias (
-    id_Ausencia INT AUTO_INCREMENT PRIMARY KEY,
-    dni_profesor VARCHAR(9) NOT NULL,
+    id_ausencia INT AUTO_INCREMENT PRIMARY KEY,
+    dni_profesor_ausencias VARCHAR(9) NOT NULL,
     fecha DATE NOT NULL,
-    tramo_horario ENUM(
-        '08:15-09:15',
-        '09:15-10:15',
-        '10:15-11:15',
-        '11:15-11:45',
-        '11:45-12:45',
-        '12:45-13:45',
-        '13:45-14:45'
-    ) NOT NULL,
-    id_Grupo_Ausencias INT NOT NULL,
+    id_tramo_ausencias INT NOT NULL,
+    id_grupo_ausencias INT NOT NULL,
     aula_zona VARCHAR(50) NOT NULL,
     motivo TEXT,
-    FOREIGN KEY (dni_profesor) REFERENCES Profesores(dni),
-    FOREIGN KEY (id_Grupo_Ausencias) REFERENCES Grupos(id_Grupo),
-    UNIQUE (dni_profesor, fecha, tramo_horario, id_Grupo_Ausencias)
+    FOREIGN KEY (dni_profesor_ausencias) REFERENCES Profesores(dni) ON DELETE CASCADE,
+    FOREIGN KEY (id_tramo_ausencias) REFERENCES Tramos_Horarios(id_tramo),
+    FOREIGN KEY (id_grupo_ausencias) REFERENCES Grupos(id_grupo),
+    UNIQUE (dni_profesor_ausencias, fecha, id_tramo_ausencias, id_grupo_ausencias)
 );
 
-/** Tabla Incidencias en la cual se almancenara toda la información de las Incidencias que sucedan **/
-
+-- Tabla Incidencias
 CREATE TABLE Incidencias (
-    id_Incidencias INT AUTO_INCREMENT PRIMARY KEY,
-    id_Guardia_Incidencias INT NOT NULL,
+    id_incidencia INT AUTO_INCREMENT PRIMARY KEY,
+    id_guardia_incidencias INT NOT NULL,
     texto TEXT NOT NULL,
     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (id_Guardia_Incidencias) REFERENCES Guardias(id_Guardia)
+    FOREIGN KEY (id_guardia_incidencias) REFERENCES Guardias(id_guardia) ON DELETE CASCADE
 );
 
-/** Tabla Tareas que almacenara la información que indique el profesor cuando se encuentre ausente para cada tramo horario que falte **/
-
+-- Tabla Tareas
 CREATE TABLE Tareas (
-    id_Tareas INT AUTO_INCREMENT PRIMARY KEY,
-    id_Ausencia_Tareas INT NOT NULL,
-    id_Grupo_Tareas INT NOT NULL,
+    id_tarea INT AUTO_INCREMENT PRIMARY KEY,
+    id_ausencia_tareas INT NOT NULL,
+    id_grupo_tareas INT NOT NULL,
     texto TEXT NOT NULL,
-    FOREIGN KEY (id_Ausencia_Tareas) REFERENCES Ausencias(id_Ausencia),
-    FOREIGN KEY (id_Grupo_Tareas) REFERENCES Grupos(id_Grupo),
-    UNIQUE (id_Ausencia_Tareas, id_Grupo_Tareas) -- Evita que se registren dos tareas para el mismo grupo en la misma ausencia
+    FOREIGN KEY (id_ausencia_tareas) REFERENCES Ausencias(id_ausencia) ON DELETE CASCADE,
+    FOREIGN KEY (id_grupo_tareas) REFERENCES Grupos(id_grupo),
+    UNIQUE (id_ausencia_tareas, id_grupo_tareas)
 );
 
- /** Tabla Actividades_Extraescolares en la cual almacenara las actividades extraescolares que se realicen en clase **/
-
+-- Tabla Actividades Extraescolares
 CREATE TABLE Actividades_Extraescolares (
-    id_Actividades_Extraescolares INT AUTO_INCREMENT PRIMARY KEY,
-    id_Grupo_Actividades_Extraescolares INT NOT NULL,
-    dia DATE NOT NULL,
-    hora ENUM(
-        '08:15-09:15',
-        '09:15-10:15',
-        '10:15-11:15',
-        '11:15-11:45',
-        '11:45-12:45',
-        '12:45-13:45',
-        '13:45-14:45'
-    ) NOT NULL,
-    dni_profesor_acompanante VARCHAR(9) NOT NULL,
+    id_actividad INT AUTO_INCREMENT PRIMARY KEY,
+    id_grupo_actividades_extraescolares INT NOT NULL,
+    fecha DATE NOT NULL,
+    id_tramo_actividades_extraescolares INT NOT NULL,
+    dni_profesor_actividades_extraescolares VARCHAR(9) NOT NULL,
     afecta_grupo_completo BOOLEAN DEFAULT FALSE,
-    FOREIGN KEY (dni_profesor_acompanante) REFERENCES Profesores(dni),
-    FOREIGN KEY (id_grupo_Actividades_Extraescolares) REFERENCES Grupos(id_Grupo),
-    UNIQUE (id_grupo_Actividades_Extraescolares, dia, hora)
+    FOREIGN KEY (id_grupo_actividades_extraescolares) REFERENCES Grupos(id_grupo),
+    FOREIGN KEY (id_tramo_actividades_extraescolares) REFERENCES Tramos_Horarios(id_tramo),
+    FOREIGN KEY (dni_profesor_actividades_extraescolares) REFERENCES Profesores(dni),
+    UNIQUE (id_grupo_actividades_extraescolares, fecha, id_tramo_actividades_extraescolares)
 );

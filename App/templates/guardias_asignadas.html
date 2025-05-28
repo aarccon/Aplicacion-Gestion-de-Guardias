@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head><title>Guardias Asignadas</title></head>
+<body>
+    <h2>Guardias asignadas</h2>
+    <table border="1">
+        <tr><th>Día</th><th>Hora</th><th>Aula/Zona</th></tr>
+        {% for guardia in guardias %}
+        <tr>
+            <td>{{ guardia.dia }}</td>
+            <td>{{ guardia.horario }}</td>
+            <td>{{ guardia.aula_zona }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    <a href="{{ url_for('home') }}">Volver</a>
+</body>
+</html>

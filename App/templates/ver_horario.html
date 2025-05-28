@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head><title>Horario Semanal</title></head>
+<body>
+    <h2>Horario semanal</h2>
+    <table border="1">
+        <tr><th>Día</th><th>Hora</th><th>Grupo</th><th>Asignatura</th><th>Aula</th></tr>
+        {% for clase in horario %}
+        <tr>
+            <td>{{ clase.dia }}</td>
+            <td>{{ clase.horario }}</td>
+            <td>{{ clase.grupo or '-' }}</td>
+            <td>{{ clase.asignatura }}</td>
+            <td>{{ clase.aula }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    <a href="{{ url_for('home') }}">Volver</a>
+</body>
+</html>

@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head><title>Registrar Tarea</title></head>
+<body>
+    <h2>Registrar tareas para ausencia</h2>
+    <form method="POST">
+        ID Ausencia: <input type="number" name="id_ausencia" required><br>
+        ID Grupo: <input type="number" name="id_grupo" required><br>
+        Texto tarea: <br>
+        <textarea name="texto" required></textarea><br>
+        <button type="submit">Registrar</button>
+    </form>
+    <p style="color: green;">{{ mensaje }}</p>
+    <a href="{{ url_for('home') }}">Volver</a>
+</body>
+</html>

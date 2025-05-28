@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<head><title>Panel del Profesor</title></head>
+<body>
+    <h2>Bienvenido, {{ username }}</h2>
+    <ul>
+        <li><a href="{{ url_for('ver_horario') }}">Ver horario semanal</a></li>
+        <li><a href="{{ url_for('guardias_asignadas') }}">Ver guardias asignadas</a></li>
+        <li><a href="{{ url_for('comunicar_ausencia') }}">Comunicar ausencia</a></li>
+        <li><a href="{{ url_for('registrar_tarea') }}">Registrar tareas para ausencia</a></li>
+        <li><a href="{{ url_for('logout') }}">Cerrar sesión</a></li>
+    </ul>
+</body>
+</html>

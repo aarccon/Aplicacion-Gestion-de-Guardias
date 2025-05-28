@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Panel Directivo</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/home.css') }}">
+</head>
+<body>
+    <header>
+        <h1>GestGuardias - Panel Directivo</h1>
+        <p>Bienvenido, {{ username }}</p>
+    </header>
+    <main>
+        <ul class="menu">
+            <li><a href="{{ url_for('registrar_profesor') }}">Registrar profesor</a></li>
+            <li><a href="{{ url_for('comunicar_ausencia') }}">Comunicar ausencia</a></li>
+            <li><a href="{{ url_for('asignar_guardia') }}">Asignar guardia</a></li>
+            <li><a href="{{ url_for('reportar_incidencia') }}">Reportar incidencia</a></li>
+            <li><a href="{{ url_for('logout') }}">Cerrar sesión</a></li>
+        </ul>
+    </main>
+</body>
+</html>
