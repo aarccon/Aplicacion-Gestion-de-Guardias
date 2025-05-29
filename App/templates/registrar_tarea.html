@@ -1,16 +1,48 @@
 <!DOCTYPE html>
-<html>
-<head><title>Registrar Tarea</title></head>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Registrar Tarea</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/registrar_tarea.css') }}">
+</head>
 <body>
-    <h2>Registrar tareas para ausencia</h2>
-    <form method="POST">
-        ID Ausencia: <input type="number" name="id_ausencia" required><br>
-        ID Grupo: <input type="number" name="id_grupo" required><br>
-        Texto tarea: <br>
-        <textarea name="texto" required></textarea><br>
-        <button type="submit">Registrar</button>
-    </form>
-    <p style="color: green;">{{ mensaje }}</p>
-    <a href="{{ url_for('home') }}">Volver</a>
+    <div class="banner">
+        <img src="{{ url_for('static', filename='img/logo_Aplicacion.png') }}" alt="Logo Izquierda" class="logo">
+        <h1 class="titulo-banner">GestGuardias - Registrar Tarea</h1>
+        <img src="{{ url_for('static', filename='img/logo_Instituto.png') }}" alt="Logo Derecha" class="logo">
+    </div>
+
+    <main>
+        <div class="form-container">
+            <h2>Registrar tareas para ausencia</h2>
+
+            <form method="POST">
+                <label for="id_ausencia">Seleccionar Ausencia:</label>
+                <select name="id_ausencia" id="id_ausencia" required>
+                    {% for ausencia in ausencias %}
+                        <option value="{{ ausencia.id_ausencia }}">
+                            {{ ausencia.fecha }} - {{ ausencia.horario }}
+                        </option>
+                    {% endfor %}
+                </select>
+
+                <label for="id_grupo">ID Grupo:</label>
+                <input type="number" name="id_grupo" id="id_grupo" required>
+
+                <label for="texto">Texto tarea:</label>
+                <textarea name="texto" id="texto" rows="4" required></textarea>
+
+                <button type="submit">Registrar</button>
+            </form>
+
+            {% if mensaje %}
+                <div class="mensaje">{{ mensaje }}</div>
+            {% endif %}
+
+            <div class="volver">
+                <a href="{{ url_for('home') }}">Volver al inicio</a>
+            </div>
+        </div>
+    </main>
 </body>
 </html>

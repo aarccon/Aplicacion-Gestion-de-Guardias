@@ -1,0 +1,164 @@
+/* === ENCABEZADO BANNER === */
+.banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: linear-gradient(to right, #34d399, #3b82f6);
+    padding: 10px 40px;
+    border-bottom: 2px solid #e2e8f0;
+    position: relative;
+}
+
+.logo {
+    height: 55px;
+    width: auto;
+}
+
+.titulo-banner {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 24px;
+    color: white;
+    font-weight: 600;
+    margin: 0;
+}
+
+/* === CUERPO === */
+body {
+    margin: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(to bottom, #f0f9ff, #e0f7fa);
+    color: #1e293b;
+}
+
+main {
+    padding: 40px 20px;
+    display: flex;
+    justify-content: center;
+}
+
+.form-container {
+    background-color: white;
+    padding: 30px;
+    border-radius: 20px;
+    box-shadow: 0 6px 30px rgba(0, 0, 0, 0.08);
+    max-width: 500px;
+    width: 100%;
+}
+
+.form-container h2 {
+    text-align: center;
+    color: #0f172a;
+    margin-bottom: 20px;
+}
+
+/* === CAMPOS DE FORMULARIO === */
+.form-group {
+    margin-bottom: 20px;
+}
+
+label {
+    font-weight: 600;
+    display: block;
+    margin-bottom: 8px;
+    color: #334155;
+}
+
+input[type="date"],
+textarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 15px;
+    background-color: #f8fafc;
+    transition: border 0.2s ease;
+}
+
+input:focus,
+textarea:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+/* === CHECKBOXES === */
+.checkbox-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.checkbox-option {
+    background-color: #f9fafb;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 0 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 15px;
+    color: #0f172a;
+    height: 50px;
+    width: 100%;
+    box-sizing: border-box;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.checkbox-option input[type="checkbox"] {
+    transform: scale(1.2);
+    margin: 0;
+    flex-shrink: 0;
+}
+
+/* === BOTÓN ENVIAR === */
+button {
+    width: 100%;
+    margin-top: 10px;
+    padding: 14px;
+    background-color: #3b82f6;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+button:hover {
+    background-color: #2563eb;
+    transform: scale(1.02);
+}
+
+/* === MENSAJE Y ENLACE VOLVER === */
+.mensaje {
+    margin-bottom: 20px;
+    padding: 10px;
+    background-color: #fee2e2;
+    color: #b91c1c;
+    border: 1px solid #fecaca;
+    border-radius: 8px;
+    text-align: center;
+    font-weight: bold;
+}
+
+.volver {
+    margin-top: 15px;
+    text-align: center;
+}
+
+.volver a {
+    color: #3b82f6;
+    text-decoration: none;
+    font-weight: bold;
+    transition: color 0.2s ease;
+}
+
+.volver a:hover {
+    text-decoration: underline;
+    color: #1d4ed8;
+}

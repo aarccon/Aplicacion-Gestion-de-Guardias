@@ -1,10 +1,57 @@
-<h2>Registrar Profesor</h2>
-<form method="POST">
-    DNI: <input name="dni"><br>
-    Nombre: <input name="nombre"><br>
-    Apellidos: <input name="apellidos"><br>
-    Email: <input name="email"><br>
-    Contraseña: <input name="password" type="password"><br>
-    Perfil (ID): <input name="id_perfil_profesores"><br>
-    <button type="submit">Registrar</button>
-</form>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Registrar Profesor</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/home.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/registrar_profesor.css') }}">
+</head>
+<body>
+
+    <div class="banner">
+        <img class="logo izquierda" src="{{ url_for('static', filename='img/logo_Aplicacion.png') }}" alt="Logo Aplicación">
+        <h1 class="titulo-banner">GestGuardias</h1>
+        <img class="logo derecha" src="{{ url_for('static', filename='img/logo_Instituto.png') }}" alt="Logo Instituto">
+    </div>
+
+    <main>
+        <div class="form-container">
+            <h2>Registrar Profesor</h2>
+
+            {% if mensaje %}
+                <div class="mensaje">{{ mensaje }}</div>
+            {% endif %}
+
+            <form method="POST">
+                <label for="dni">DNI:</label>
+                <input name="dni" id="dni" required>
+
+                <label for="nombre">Nombre:</label>
+                <input name="nombre" id="nombre" required>
+
+                <label for="apellidos">Apellidos:</label>
+                <input name="apellidos" id="apellidos" required>
+
+                <label for="email">Email:</label>
+                <input name="email" id="email" type="email" required>
+
+                <label for="password">Contraseña:</label>
+                <input name="password" type="password" id="password" required>
+
+                <label for="perfil">Perfil:</label>
+                <select name="perfil" id="perfil" required>
+                    <option value="1">Profesorado</option>
+                    <option value="2">Dirección</option>
+                </select>
+
+                <button type="submit">Registrar</button>
+            </form>
+
+            <div class="volver">
+                <a href="{{ url_for('home') }}">← Volver al Panel</a>
+            </div>
+        </div>
+    </main>
+
+</body>
+</html>

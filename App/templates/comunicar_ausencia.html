@@ -1,10 +1,52 @@
-<h2>Comunicar Ausencia</h2>
-<form method="POST">
-    DNI: <input name="dni"><br>
-    Fecha: <input type="date" name="fecha"><br>
-    Tramo horario (ID): <input name="tramo"><br>
-    Grupo (ID): <input name="grupo"><br>
-    Aula/Zona: <input name="aula"><br>
-    Motivo: <textarea name="motivo"></textarea><br>
-    <button type="submit">Enviar</button>
-</form>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Comunicar Ausencia</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/comunicar_ausencias.css') }}">
+</head>
+<body>
+    <header class="banner">
+        <img src="{{ url_for('static', filename='img/logo_Aplicacion.png') }}" alt="Logo" class="logo">
+        <h1 class="titulo-banner">GestGuardias</h1>
+        <img src="{{ url_for('static', filename='img/logo_Instituto.png') }}" alt="IES" class="logo">
+    </header>
+
+    <main>
+        <div class="form-container">
+            <h2>Comunicar Ausencia</h2>
+
+            {% if mensaje %}
+                <div class="mensaje">{{ mensaje }}</div>
+            {% endif %}
+
+            <form action="{{ url_for('comunicar_ausencia') }}" method="POST">
+                <div class="form-group">
+                    <label for="fecha">Fecha:</label>
+                    <input type="date" id="fecha" name="fecha" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Selecciona los tramos horarios afectados:</label>
+                    <div class="checkbox-list">
+                        {% for tramo in tramos %}
+                            <label class="checkbox-option">
+                                <input type="checkbox" name="tramo" value="{{ tramo['id_tramo'] }}">
+                                {{ tramo['horario'] }}
+                            </label>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="motivo">Motivo:</label>
+                    <textarea id="motivo" name="motivo" rows="4" placeholder="Motivo de la ausencia..." required></textarea>
+                </div>
+
+                <button type="submit">Enviar</button>
+                <div class="volver"><a href="{{ url_for('home') }}">← Volver al Panel</a></div>
+            </form>
+        </div>
+    </main>
+</body>
+</html>

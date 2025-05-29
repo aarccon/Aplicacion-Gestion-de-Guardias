@@ -40,7 +40,7 @@ def registrar_profesor():
         apellidos = request.form['apellidos']
         email = request.form['email']
         password = request.form['password']
-        id_perfil = request.form['id_perfil_profesores']
+        id_perfil = int(request.form['perfil'])  # Desplegable actualizado
         password_hash = generate_password_hash(password)
 
         if not all([dni, nombre, apellidos, email, password, id_perfil]):
@@ -131,12 +131,42 @@ def asignar_guardia():
 
     return render_template('asignar_guardia.html', mensaje=mensaje)
 
+@app.route('/incidencias/reportar', methods=['GET', 'POST'])
+def reportar_incidencia():
+    if 'usuario_dni' not in session:
+        return redirect(url_for('login'))
+
+    mensaje = ""
+    if request.method == 'POST':
+        id_guardia = request.form['id_guardia']
+        texto = request.form['texto']
+
+        if not all([id_guardia, texto]):
+            mensaje = "Todos los campos son obligatorios."
+        else:
+            connection = get_db_connection()
+            with connection.cursor() as cursor:
+                try:
+                    cursor.execute("""
+                        INSERT INTO Incidencias (id_guardia_incidencias, texto)
+                        VALUES (%s, %s)
+                    """, (id_guardia, texto))
+                    connection.commit()
+                    mensaje = "Incidencia reportada correctamente."
+                except Exception as e:
+                    mensaje = f"Error al registrar la incidencia: {str(e)}"
+            connection.close()
+
+    return render_template('reportar_incidencia.html', mensaje=mensaje)
+
 @app.route('/tareas/registrar', methods=['GET', 'POST'])
 def registrar_tarea():
     if 'usuario_dni' not in session:
         return redirect(url_for('login'))
 
     mensaje = ""
+    connection = get_db_connection()
+
     if request.method == 'POST':
         id_ausencia = request.form['id_ausencia']
         id_grupo = request.form['id_grupo']
@@ -145,7 +175,6 @@ def registrar_tarea():
         if not all([id_ausencia, id_grupo, texto]):
             mensaje = "Todos los campos son obligatorios."
         else:
-            connection = get_db_connection()
             with connection.cursor() as cursor:
                 try:
                     cursor.execute("""
@@ -156,9 +185,20 @@ def registrar_tarea():
                     mensaje = "Tarea registrada correctamente."
                 except pymysql.err.IntegrityError:
                     mensaje = "Ya existe una tarea para esa ausencia y grupo."
-            connection.close()
 
-    return render_template('registrar_tarea.html', mensaje=mensaje)
+    # Cargar ausencias del profesor logueado para mostrarlas en el desplegable
+    with connection.cursor(pymysql.cursors.DictCursor) as cursor:
+        cursor.execute("""
+            SELECT a.id_ausencia, a.fecha, t.horario
+            FROM Ausencias a
+            JOIN Tramos_Horarios t ON a.id_tramo_ausencias = t.id_tramo
+            WHERE a.dni_profesor_ausencias = %s
+            ORDER BY a.fecha, t.id_tramo
+        """, (session['usuario_dni'],))
+        ausencias = cursor.fetchall()
+
+    connection.close()
+    return render_template('registrar_tarea.html', mensaje=mensaje, ausencias=ausencias)
 
 @app.route('/ausencias/comunicar', methods=['GET', 'POST'])
 def comunicar_ausencia():
@@ -166,31 +206,39 @@ def comunicar_ausencia():
         return redirect(url_for('login'))
 
     mensaje = ""
+    connection = get_db_connection()
+
     if request.method == 'POST':
         dni = session['usuario_dni']
         fecha = request.form['fecha']
-        tramo = request.form['tramo']
-        grupo = request.form['grupo']
-        aula = request.form['aula']
+        tramos = request.form.getlist('tramo')
         motivo = request.form['motivo']
 
-        if not all([fecha, tramo, grupo, aula]):
+        if not fecha or not tramos:
             mensaje = "Todos los campos son obligatorios."
         else:
-            connection = get_db_connection()
             with connection.cursor() as cursor:
-                try:
-                    cursor.execute("""
-                        INSERT INTO Ausencias (dni_profesor_ausencias, fecha, id_tramo_ausencias, id_grupo_ausencias, aula_zona, motivo)
-                        VALUES (%s, %s, %s, %s, %s, %s)
-                    """, (dni, fecha, tramo, grupo, aula, motivo))
-                    connection.commit()
-                    mensaje = "Ausencia comunicada correctamente."
-                except pymysql.err.IntegrityError:
-                    mensaje = "Ya existe una ausencia registrada con esos datos."
-            connection.close()
+                errores = []
+                for tramo in tramos:
+                    try:
+                        cursor.execute("""
+                            INSERT INTO Ausencias (dni_profesor_ausencias, fecha, id_tramo_ausencias, motivo)
+                            VALUES (%s, %s, %s, %s)
+                        """, (dni, fecha, tramo, motivo))
+                    except pymysql.err.IntegrityError:
+                        errores.append(f"Ya existe una ausencia para el tramo {tramo} en esa fecha.")
+                connection.commit()
+            if errores:
+                mensaje = "Algunas ausencias no se registraron: " + "; ".join(errores)
+            else:
+                mensaje = "Ausencia(s) comunicada(s) correctamente."
 
-    return render_template('comunicar_ausencia.html', mensaje=mensaje)
+    with connection.cursor(pymysql.cursors.DictCursor) as cursor:
+        cursor.execute("SELECT id_tramo, horario FROM Tramos_Horarios")
+        tramos = cursor.fetchall()
+    connection.close()
+
+    return render_template('comunicar_ausencia.html', tramos=tramos, mensaje=mensaje)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -215,9 +263,6 @@ def login():
 def logout():
     session.clear()
     return redirect(url_for('login'))
-
-print("Rutas registradas:")
-print(app.url_map)
 
 if __name__ == '__main__':
     app.run(debug=True)

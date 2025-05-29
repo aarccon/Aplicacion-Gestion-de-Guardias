@@ -1,14 +1,23 @@
 <!DOCTYPE html>
-<html>
-<head><title>Panel del Profesor</title></head>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Panel Profesor</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/home_profesor.css') }}">
+</head>
 <body>
-    <h2>Bienvenido, {{ username }}</h2>
-    <ul>
-        <li><a href="{{ url_for('ver_horario') }}">Ver horario semanal</a></li>
-        <li><a href="{{ url_for('guardias_asignadas') }}">Ver guardias asignadas</a></li>
-        <li><a href="{{ url_for('comunicar_ausencia') }}">Comunicar ausencia</a></li>
-        <li><a href="{{ url_for('registrar_tarea') }}">Registrar tareas para ausencia</a></li>
-        <li><a href="{{ url_for('logout') }}">Cerrar sesión</a></li>
-    </ul>
+    <header>
+        <h1>GestGuardias - Panel Profesor</h1>
+        <p>Bienvenido, {{ username }}</p>
+    </header>
+    <main>
+        <ul class="menu">
+            <li><a href="{{ url_for('ver_horario') }}">Ver horario semanal</a></li>
+            <li><a href="{{ url_for('guardias_asignadas') }}">Ver guardias asignadas</a></li>
+            <li><a href="{{ url_for('comunicar_ausencia') }}">Comunicar ausencia</a></li>
+            <li><a href="{{ url_for('registrar_tarea') }}">Registrar tareas para ausencia</a></li>
+            <li><a href="{{ url_for('logout') }}">Cerrar sesión</a></li>
+        </ul>
+    </main>
 </body>
 </html>

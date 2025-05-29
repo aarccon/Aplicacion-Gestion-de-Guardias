@@ -54,6 +54,11 @@ USE Proyecto_Final;
     id_asignatura INT AUTO_INCREMENT PRIMARY KEY,
     nombre VARCHAR(100) UNIQUE NOT NULL
 	);
+    
+    CREATE TABLE Aulas (
+    id_aula INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(50) UNIQUE NOT NULL
+    );
 
 /** Tabla Horarios en la cual almacenara todos los horarios de cada profesor la clave primaria sera un identificador que sera auto incremental, 
 	el dni del profesor para ver cada hora que tiene asignado cada profesor, el id del díua en el cual se realiza la hora, el tramo de horario en el cual realiza la hora y el id del grupo
@@ -61,34 +66,36 @@ USE Proyecto_Final;
     foranea el dni del profesor, el id del día, el id del tramo horario, el id del grupo y el id de la asignatura **/
 
 	CREATE TABLE Horarios (
-		id_horario INT AUTO_INCREMENT PRIMARY KEY,
-		dni_profesor_horarios VARCHAR(9) NOT NULL,
-		id_dia_horarios INT NOT NULL,
-		id_tramo_horarios INT NOT NULL,
-		id_grupo_horarios INT,
-        id_asignatura_horarios INT NOT NULL,
-		aula VARCHAR(50),
-		UNIQUE (dni_profesor_horarios, id_dia_horarios, id_tramo_horarios),
-		FOREIGN KEY (dni_profesor_horarios) REFERENCES Profesores(dni) ON DELETE CASCADE,
-		FOREIGN KEY (id_dia_horarios) REFERENCES Dias_Semana(id_dia),
-		FOREIGN KEY (id_tramo_horarios) REFERENCES Tramos_Horarios(id_tramo),
-		FOREIGN KEY (id_grupo_horarios) REFERENCES Grupos(id_grupo),
-        FOREIGN KEY (id_asignatura_horarios) REFERENCES Asignaturas(id_asignatura)
-	);
+    id_horario INT AUTO_INCREMENT PRIMARY KEY,
+    dni_profesor_horarios VARCHAR(9) NOT NULL,
+    id_dia_horarios INT NOT NULL,
+    id_tramo_horarios INT NOT NULL,
+    id_grupo_horarios INT,
+    id_asignatura_horarios INT NOT NULL,
+    id_aula INT,
+    UNIQUE (dni_profesor_horarios, id_dia_horarios, id_tramo_horarios),
+    FOREIGN KEY (dni_profesor_horarios) REFERENCES Profesores(dni) ON DELETE CASCADE,
+    FOREIGN KEY (id_dia_horarios) REFERENCES Dias_Semana(id_dia),
+    FOREIGN KEY (id_tramo_horarios) REFERENCES Tramos_Horarios(id_tramo),
+    FOREIGN KEY (id_grupo_horarios) REFERENCES Grupos(id_grupo),
+    FOREIGN KEY (id_asignatura_horarios) REFERENCES Asignaturas(id_asignatura),
+    FOREIGN KEY (id_aula) REFERENCES Aulas(id_aula)
+);
 
 /** Tabla Guardias almacenara las guardias que se realicen cada guardia que se realice almacenara **/
 
 	CREATE TABLE Guardias (
-		id_guardia INT AUTO_INCREMENT PRIMARY KEY,
-		dni_profesor_guardias VARCHAR(9) NOT NULL,
-		id_dia_guardias INT NOT NULL,
-		id_tramo_guardias INT NOT NULL,
-		aula_zona VARCHAR(50),
-		UNIQUE (dni_profesor_guardias, id_dia_guardias, id_tramo_guardias),
-		FOREIGN KEY (dni_profesor_guardias) REFERENCES Profesores(dni) ON DELETE CASCADE,
-		FOREIGN KEY (id_dia_guardias) REFERENCES Dias_Semana(id_dia),
-		FOREIGN KEY (id_tramo_guardias) REFERENCES Tramos_Horarios(id_tramo)
-	);
+    id_guardia INT AUTO_INCREMENT PRIMARY KEY,
+    dni_profesor_guardias VARCHAR(9) NOT NULL,
+    id_dia_guardias INT NOT NULL,
+    id_tramo_guardias INT NOT NULL,
+    id_aula_guardias INT,
+    UNIQUE (dni_profesor_guardias, id_dia_guardias, id_tramo_guardias),
+    FOREIGN KEY (dni_profesor_guardias) REFERENCES Profesores(dni) ON DELETE CASCADE,
+    FOREIGN KEY (id_dia_guardias) REFERENCES Dias_Semana(id_dia),
+    FOREIGN KEY (id_tramo_guardias) REFERENCES Tramos_Horarios(id_tramo),
+    FOREIGN KEY (id_aula_guardias) REFERENCES Aulas(id_aula)
+);
 
 -- Tabla Ausencias
 CREATE TABLE Ausencias (
@@ -96,13 +103,10 @@ CREATE TABLE Ausencias (
     dni_profesor_ausencias VARCHAR(9) NOT NULL,
     fecha DATE NOT NULL,
     id_tramo_ausencias INT NOT NULL,
-    id_grupo_ausencias INT NOT NULL,
-    aula_zona VARCHAR(50) NOT NULL,
     motivo TEXT,
     FOREIGN KEY (dni_profesor_ausencias) REFERENCES Profesores(dni) ON DELETE CASCADE,
     FOREIGN KEY (id_tramo_ausencias) REFERENCES Tramos_Horarios(id_tramo),
-    FOREIGN KEY (id_grupo_ausencias) REFERENCES Grupos(id_grupo),
-    UNIQUE (dni_profesor_ausencias, fecha, id_tramo_ausencias, id_grupo_ausencias)
+    UNIQUE (dni_profesor_ausencias, fecha, id_tramo_ausencias)
 );
 
 -- Tabla Incidencias
