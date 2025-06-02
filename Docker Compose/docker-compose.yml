@@ -1,0 +1,41 @@
+version: "3.8"
+
+services:
+  mysql:
+    image: mysql:latest
+    container_name: mysql-aplicacion
+    environment:
+      MYSQL_ROOT_PASSWORD: usuario
+      MYSQL_DATABASE: Proyecto_Final
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-aplicacion:/var/lib/mysql
+
+  mongodb:
+    image: mongo:6
+    container_name: mongodb-chat
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  flaskapp:
+    build: .
+    container_name: flaskapp
+    ports:
+      - "5000:5000"
+    depends_on:
+      - mysql
+      - mongodb
+    environment:
+      - FLASK_ENV=development
+      - MONGO_URI=mongodb://mongodb-chat:27017/
+      - MYSQL_HOST=mysql
+    volumes:
+      - .:/app
+
+volumes:
+  mysql-aplicacion:
+  mongo_data:

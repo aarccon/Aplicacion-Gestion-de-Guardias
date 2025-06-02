@@ -1,8 +1,17 @@
 import datetime
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 import pymysql
+import os
 from werkzeug.security import generate_password_hash, check_password_hash
 from config import get_db_connection, SECRET_KEY
+from pymongo import MongoClient
+from config import MONGO_URI, MONGO_DB, MONGO_COLECCION
+from flask import jsonify
+
+mongo_client = MongoClient(MONGO_URI)
+mongo_db = mongo_client[MONGO_DB]
+coleccion_mensajes = mongo_db[MONGO_COLECCION]
+db=mongo_client
 
 app = Flask(__name__)
 app.secret_key = SECRET_KEY
@@ -258,6 +267,53 @@ def login():
         return render_template('login.html', mensaje="DNI o contraseña incorrectos.")
 
     return render_template('login.html')
+
+@app.route('/chat')
+def chat():
+    if 'usuario_dni' not in session:
+        return redirect(url_for('login'))
+    mensajes = list(coleccion_mensajes.find({"archivado": False}).sort("timestamp", -1))
+    return render_template('chat.html', mensajes=mensajes)
+
+@app.route('/chat/mensajes')
+def obtener_mensajes():
+    mensajes = list(coleccion_mensajes.find({"archivado": False}).sort("timestamp", -1))
+    for m in mensajes:
+        m["_id"] = str(m["_id"])
+        m["timestamp"] = m["timestamp"].strftime("%d/%m/%Y %H:%M")
+    return jsonify(mensajes)
+
+@app.route('/chat/enviar', methods=['POST'])
+def enviar_mensaje():
+    if 'usuario_dni' not in session:
+        return redirect(url_for('login'))
+
+    mensaje = request.form['mensaje']
+    if mensaje.strip():
+        coleccion_mensajes.insert_one({
+            "autor": session['usuario_dni'],
+            "nombre": session['username'],
+            "mensaje": mensaje.strip(),
+            "timestamp": datetime.datetime.utcnow(),
+            "archivado": False
+        })
+    return redirect(url_for('chat'))
+
+@app.route('/chat/archivar/<id>')
+def archivar_mensaje(id):
+    if session.get('usuario_dni') != '00000000A':  # Control de admin
+        return redirect(url_for('chat'))
+    from bson.objectid import ObjectId
+    coleccion_mensajes.update_one({'_id': ObjectId(id)}, {'$set': {'archivado': True}})
+    return redirect(url_for('chat'))
+
+@app.route('/chat/eliminar/<id>')
+def eliminar_mensaje(id):
+    if session.get('usuario_dni') != '00000000A':  # Control de admin
+        return redirect(url_for('chat'))
+    from bson.objectid import ObjectId
+    coleccion_mensajes.delete_one({'_id': ObjectId(id)})
+    return redirect(url_for('chat'))
 
 @app.route('/logout')
 def logout():

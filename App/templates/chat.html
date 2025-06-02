@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Chat</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/chat.css') }}">
+</head>
+<body>
+    <div class="banner">
+        <img src="{{ url_for('static', filename='img/logo_izquierda.png') }}" alt="Logo Izquierda" class="logo">
+        <h1 class="titulo-banner">Chat</h1>
+        <img src="{{ url_for('static', filename='img/logo_derecha.png') }}" alt="Logo Derecha" class="logo">
+    </div>
+
+    <main>
+        <div class="form-container">
+            <h2>Comentarios del Profesorado</h2>
+
+            <form method="POST" action="{{ url_for('enviar_mensaje') }}">
+                <textarea name="mensaje" rows="3" placeholder="Escribe tu mensaje..." required></textarea>
+                <button type="submit">Enviar</button>
+            </form>
+
+            <ul id="zona-mensajes" class="mensajes">
+                <!-- Mensajes cargados dinámicamente -->
+            </ul>
+
+            <div class="volver">
+                <a href="{{ url_for('home') }}">Volver al panel</a>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        function cargarMensajes() {
+            fetch("{{ url_for('obtener_mensajes') }}")
+                .then(response => response.json())
+                .then(data => {
+                    const contenedor = document.getElementById("zona-mensajes");
+                    contenedor.innerHTML = "";
+                    data.forEach(msg => {
+                        contenedor.innerHTML += `
+                            <li>
+                                <strong>${msg.nombre}:</strong> ${msg.mensaje}<br>
+                                <small>${msg.timestamp}</small>
+                                {% if session['usuario_dni'] == '00000000A' %}
+                                    <div class="acciones">
+                                        <a href="/chat/archivar/${msg._id}">[Archivar]</a>
+                                        <a href="/chat/eliminar/${msg._id}">[Eliminar]</a>
+                                    </div>
+                                {% endif %}
+                            </li>`;
+                    });
+                })
+                .catch(error => console.error("Error al cargar mensajes:", error));
+        }
+
+        setInterval(cargarMensajes, 3000);  // Cada 3 segundos
+        window.onload = cargarMensajes;
+    </script>
+</body>
+</html>

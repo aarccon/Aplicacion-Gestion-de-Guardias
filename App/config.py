@@ -23,3 +23,8 @@ def get_db_connection():
         db=DB_NAME,
         cursorclass=pymysql.cursors.DictCursor  # Devuelve resultados como diccionarios
     )
+
+# MongoDB
+MONGO_URI = os.environ.get('MONGO_URI', 'mongodb://localhost:27017/')
+MONGO_DB = os.environ.get('MONGO_DB', 'proyecto_final')
+MONGO_COLECCION = os.environ.get('MONGO_COLECCION', 'mensajes_chat')
