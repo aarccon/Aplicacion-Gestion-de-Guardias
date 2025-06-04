@@ -1,0 +1,6 @@
+dni,nombre,apellidos,email,password,puntos_guardia,id_perfil_profesores
+12345678A,María,López García,maria.lopez@ies.es,temporal123,0,1
+23456789B,Carlos,Sánchez Pérez,carlos.sanchez@ies.es,temporal123,0,1
+34567890C,Lucía,Fernández Ruiz,lucia.fernandez@ies.es,temporal123,0,1
+45678901D,Javier,Gómez Martín,javier.gomez@ies.es,temporal123,0,2
+56789012E,Laura,Molina Díaz,laura.molina@ies.es,temporal123,0,1

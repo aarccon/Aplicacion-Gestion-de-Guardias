@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Horario de otro profesor</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/ver_horario_profesores.css') }}">
+</head>
+<body>
+    <div class="banner">
+        <img src="{{ url_for('static', filename='img/logo_Aplicacion.png') }}" class="logo" alt="Logo Izquierda">
+        <h1 class="titulo-banner">Consultar Horario de Profesorado</h1>
+        <img src="{{ url_for('static', filename='img/logo_Instituto.png') }}" class="logo" alt="Logo Derecha">
+    </div>
+
+    <main>
+        <div class="form-container">
+            <form method="POST">
+                <label for="dni_profesor">Selecciona un profesor:</label>
+                <select name="dni_profesor" id="dni_profesor" required>
+                    <option value="">-- Selecciona --</option>
+                    {% for prof in profesores %}
+                        <option value="{{ prof.dni }}" {% if prof.dni == profesor_dni %}selected{% endif %}>
+                            {{ prof.nombre_completo }}
+                        </option>
+                    {% endfor %}
+                </select>
+                <button type="submit">Ver horario</button>
+            </form>
+
+            {% if horario %}
+                <h2 style="text-align: center;">Horario</h2>
+                <table class="horario">
+                    <thead>
+                        <tr>
+                            <th>Día</th>
+                            <th>Hora</th>
+                            <th>Grupo</th>
+                            <th>Asignatura</th>
+                            <th>Aula</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for clase in horario %}
+                            <tr>
+                                <td>{{ clase.dia }}</td>
+                                <td>{{ clase.horario }}</td>
+                                <td>{{ clase.grupo or '-' }}</td>
+                                <td>{{ clase.asignatura }}</td>
+                                <td>{{ clase.aula or '-' }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% endif %}
+
+            <div class="volver">
+                <a href="{{ url_for('home') }}">Volver al Menú Principal</a>
+            </div>
+        </div>
+    </main>
+</body>
+</html>

@@ -1,0 +1,92 @@
+.banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: linear-gradient(to right, #34d399, #3b82f6);
+    padding: 10px 40px;
+    border-bottom: 2px solid #e2e8f0;
+    position: relative;
+}
+.logo {
+    height: 55px;
+    width: auto;
+}
+.titulo-banner {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 24px;
+    color: white;
+    font-weight: 600;
+    margin: 0;
+}
+
+body {
+    margin: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(to bottom, #f0f9ff, #e0f7fa);
+    color: #1e293b;
+}
+main {
+    padding: 40px 20px;
+    display: flex;
+    justify-content: center;
+}
+.form-container {
+    background-color: white;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 6px 30px rgba(0, 0, 0, 0.08);
+    max-width: 550px;
+    width: 100%;
+}
+label {
+    font-weight: 600;
+    display: block;
+    margin: 12px 0 6px;
+    color: #334155;
+}
+input, select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 15px;
+    background-color: #f8fafc;
+}
+button {
+    width: 100%;
+    margin-top: 20px;
+    padding: 14px;
+    background-color: #3b82f6;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+}
+button:hover {
+    background-color: #2563eb;
+}
+.mensaje {
+    margin-bottom: 20px;
+    padding: 10px;
+    background-color: #fee2e2;
+    color: #b91c1c;
+    border: 1px solid #fecaca;
+    border-radius: 8px;
+    text-align: center;
+}
+.volver {
+    margin-top: 15px;
+    text-align: center;
+}
+.volver a {
+    color: #3b82f6;
+    text-decoration: none;
+    font-weight: bold;
+}
+.volver a:hover {
+    text-decoration: underline;
+}

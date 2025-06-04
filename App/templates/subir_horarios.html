@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Subir CSV de Horarios</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/subida_horarios.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Subida de Horarios</h1>
+        {% if mensaje %}<p class="mensaje">{{ mensaje }}</p>{% endif %}
+        <form action="{{ url_for('subir_horarios') }}" method="POST" enctype="multipart/form-data">
+            <label for="archivo">Selecciona el archivo CSV:</label>
+            <input type="file" name="archivo" accept=".csv" required>
+            <button type="submit">Subir CSV</button>
+        </form>
+        <div class="volver">
+            <a href="{{ url_for('home') }}">Volver al menú principal</a>
+        </div>
+    </div>
+</body>
+</html>

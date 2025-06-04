@@ -1,8 +1,57 @@
-<h2>Asignar Guardia</h2>
-<form method="POST">
-    DNI Profesor: <input name="dni"><br>
-    Día (ID): <input name="dia"><br>
-    Tramo Horario (ID): <input name="tramo"><br>
-    Aula/Zona: <input name="aula"><br>
-    <button type="submit">Asignar</button>
-</form>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Asignar Guardia Manual</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/asignar_guardia.css') }}">
+</head>
+<body>
+    <div class="banner">
+        <img src="{{ url_for('static', filename='img/logo_Aplicacion.png') }}" alt="Logo Aplicación" class="logo">
+        <h1 class="titulo-banner">Asignación de Guardia</h1>
+        <img src="{{ url_for('static', filename='img/logo_Instituto.png') }}" alt="Logo Instituto" class="logo">
+    </div>
+
+    <main>
+        <div class="form-container">
+            {% if mensaje %}
+                <div class="mensaje">{{ mensaje }}</div>
+            {% endif %}
+            <form method="POST">
+                <label for="profesor_dni">Profesor:</label>
+                <select name="profesor_dni" required>
+                    <option value="">-- Selecciona --</option>
+                    {% for p in profesores %}
+                        <option value="{{ p.dni }}">{{ p.nombre_completo }}</option>
+                    {% endfor %}
+                </select>
+
+                <label for="dia">Día:</label>
+                <select name="dia" required>
+                    <option value="">-- Selecciona --</option>
+                    {% for d in dias %}
+                        <option value="{{ d.id_dia }}">{{ d.nombre }}</option>
+                    {% endfor %}
+                </select>
+
+                <label for="tramo">Tramo horario:</label>
+                <select name="tramo" required>
+                    <option value="">-- Selecciona --</option>
+                    {% for t in tramos %}
+                        <option value="{{ t.id_tramo }}">{{ t.horario }}</option>
+                    {% endfor %}
+                </select>
+
+                <label for="aula">Aula/Zona:</label>
+                <input type="text" name="aula" placeholder="Ej: Biblioteca, Patio..." required>
+
+                <button type="submit">Asignar Guardia</button>
+            </form>
+
+            <div class="volver">
+                <a href="{{ url_for('home') }}">Volver al Panel</a>
+            </div>
+        </div>
+    </main>
+</body>
+</html>

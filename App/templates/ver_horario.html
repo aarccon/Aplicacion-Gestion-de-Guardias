@@ -1,20 +1,56 @@
 <!DOCTYPE html>
-<html>
-<head><title>Horario Semanal</title></head>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Horario</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/ver_horario.css') }}">
+</head>
 <body>
-    <h2>Horario semanal</h2>
-    <table border="1">
-        <tr><th>Día</th><th>Hora</th><th>Grupo</th><th>Asignatura</th><th>Aula</th></tr>
-        {% for clase in horario %}
-        <tr>
-            <td>{{ clase.dia }}</td>
-            <td>{{ clase.horario }}</td>
-            <td>{{ clase.grupo or '-' }}</td>
-            <td>{{ clase.asignatura }}</td>
-            <td>{{ clase.aula }}</td>
-        </tr>
-        {% endfor %}
-    </table>
-    <a href="{{ url_for('home') }}">Volver</a>
+    <div class="banner">
+        <img src="{{ url_for('static', filename='img/logo_Aplicacion.png') }}" alt="Logo Izquierda" class="logo">
+        <h1 class="titulo-banner">Horario</h1>
+        <img src="{{ url_for('static', filename='img/logo_Instituto.png') }}" alt="Logo Derecha" class="logo">
+    </div>
+
+    <main>
+        <div class="form-container">
+            <h2>Horario</h2>
+            <div class="tabla-horario">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Hora</th>
+                            <th>Lunes</th>
+                            <th>Martes</th>
+                            <th>Miércoles</th>
+                            <th>Jueves</th>
+                            <th>Viernes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for tramo in tramos %}
+                        <tr>
+                            <td>{{ tramo.horario }}</td>
+                            {% for dia in dias %}
+                                <td>
+                                    {% set celda = horario.get((dia.id_dia, tramo.id_tramo), None) %}
+                                    {% if celda %}
+                                        <div><strong>{{ celda.asignatura }}</strong></div>
+                                        <div>{{ celda.aula }}</div>
+                                        <div>{{ celda.grupo }}</div>
+                                    {% endif %}
+                                </td>
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="volver">
+                <a href="{{ url_for('home') }}">Volver al Menú Principal</a>
+            </div>
+        </div>
+    </main>
 </body>
 </html>

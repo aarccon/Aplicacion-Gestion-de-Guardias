@@ -78,7 +78,7 @@ INSERT INTO Tramos_Horarios (horario) VALUES
 ('11:45 - 12:45'),
 ('12:45 - 13:45'),
 ('13:45 - 14:45');
-
+SELECT * FROM Asignaturas;
 INSERT INTO Asignaturas (nombre) VALUES
 ('Administración de Sistema Gestores de Bases de Datos'),
 ('Ampliación Anatomía'),
@@ -252,3 +252,25 @@ INSERT INTO Aulas (nombre) VALUES
 ('Patio deportivo'),
 ('Salón de usos múltiples'),
 ('Taller Montaje Informática');
+
+/** INSERCCIÓN HORARIOS PRUEBAS **/
+INSERT INTO Horarios (dni_profesor_horarios,id_dia_horarios,id_tramo_horarios,id_grupo_horarios,id_asignatura_horarios,id_aula)
+VALUES ('00000000A',1,1,13,16,14);
+INSERT INTO Horarios(dni_profesor_horarios,id_dia_horarios,id_tramo_horarios,id_asignatura_horarios) VALUES ('00000000A',1,2,50);
+INSERT INTO Horarios(dni_profesor_horarios,id_dia_horarios,id_tramo_horarios,id_asignatura_horarios) VALUES ('00000000A',1,3,34);
+INSERT INTO Horarios (dni_profesor_horarios,id_dia_horarios,id_tramo_horarios,id_grupo_horarios,id_asignatura_horarios,id_aula) VALUES ('00000000A',1,5,21,77,15);
+INSERT INTO Horarios (dni_profesor_horarios,id_dia_horarios,id_tramo_horarios,id_grupo_horarios,id_asignatura_horarios,id_aula) VALUES ('00000000A',1,6,25,80,42);
+INSERT INTO Horarios (dni_profesor_horarios,id_dia_horarios,id_tramo_horarios,id_grupo_horarios,id_asignatura_horarios,id_aula) VALUES ('00000000A',2,5,21,77,15);
+INSERT INTO Horarios (dni_profesor_horarios,id_dia_horarios,id_tramo_horarios,id_grupo_horarios,id_asignatura_horarios,id_aula) VALUES ('00000000A',2,6,28,76,42);
+INSERT INTO Horarios (dni_profesor_horarios,id_dia_horarios,id_tramo_horarios,id_grupo_horarios,id_asignatura_horarios,id_aula) VALUES ('00000000A',2,7,25,80,42);
+INSERT INTO Horarios (dni_profesor_horarios,id_dia_horarios,id_tramo_horarios,id_asignatura_horarios,id_aula) VALUES ('00000000A',3,1,51,47);
+INSERT INTO Horarios (dni_profesor_horarios,id_dia_horarios,id_tramo_horarios,id_grupo_horarios,id_asignatura_horarios,id_aula) VALUES ('00000000A',3,2,25,80,42);
+INSERT INTO Horarios (dni_profesor_horarios,id_dia_horarios,id_tramo_horarios,id_grupo_horarios,id_asignatura_horarios,id_aula) VALUES ('00000000A',3,3,28,76,42);
+INSERT INTO Horarios(dni_profesor_horarios,id_dia_horarios,id_tramo_horarios,id_asignatura_horarios) VALUES ('00000000A',3,5,50);
+INSERT INTO Horarios (dni_profesor_horarios,id_dia_horarios,id_tramo_horarios,id_grupo_horarios,id_asignatura_horarios,id_aula) VALUES ('00000000A',3,6,21,77,15);
+INSERT INTO Horarios(dni_profesor_horarios,id_dia_horarios,id_tramo_horarios,id_asignatura_horarios) VALUES ('00000000A',4,5,98);
+INSERT INTO Horarios (dni_profesor_horarios,id_dia_horarios,id_tramo_horarios,id_grupo_horarios,id_asignatura_horarios,id_aula) VALUES ('00000000A',4,6,28,76,42);
+INSERT INTO Horarios (dni_profesor_horarios,id_dia_horarios,id_tramo_horarios,id_grupo_horarios,id_asignatura_horarios,id_aula) VALUES ('00000000A',5,1,21,77,15);
+INSERT INTO Horarios (dni_profesor_horarios,id_dia_horarios,id_tramo_horarios,id_grupo_horarios,id_asignatura_horarios,id_aula) VALUES ('00000000A',5,2,25,80,42);
+INSERT INTO Horarios(dni_profesor_horarios,id_dia_horarios,id_tramo_horarios,id_asignatura_horarios) VALUES ('00000000A',5,3,50);
+INSERT INTO Horarios (dni_profesor_horarios,id_dia_horarios,id_tramo_horarios,id_grupo_horarios,id_asignatura_horarios,id_aula) VALUES ('00000000A',5,7,28,76,42);
