@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Guardias de Hoy</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/guardias_hoy.css') }}">
+</head>
+<body>
+    <div class="banner">
+        <img src="{{ url_for('static', filename='img/logo_Aplicacion.png') }}" class="logo" alt="Logo Izquierda">
+        <h1 class="titulo-banner">Guardias de Hoy</h1>
+        <img src="{{ url_for('static', filename='img/logo_Instituto.png') }}" class="logo" alt="Logo Derecha">
+    </div>
+
+    <main class="contenido">
+        {% if mensaje %}
+            <p class="mensaje">{{ mensaje }}</p>
+        {% endif %}
+
+        <section>
+            <h2>Guardias del Día</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Profesor</th>
+                        <th>Hora</th>
+                        <th>Aula/Zona</th>
+                        <th>Incidencia</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for g in guardias %}
+                    <tr>
+                        <td>{{ g.nombre }} {{ g.apellidos }}</td>
+                        <td>{{ g.horario }}</td>
+                        <td>{{ g.aula_zona }}</td>
+                        <td>
+                            <form method="POST">
+                                <input type="hidden" name="id_guardia" value="{{ g.id_guardia }}">
+                                <textarea name="texto" placeholder="Escribe una incidencia..."></textarea>
+                                <button type="submit">Registrar</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </section>
+
+        <section>
+            <h2>Incidencias Registradas Hoy</h2>
+            {% if incidencias %}
+                <ul>
+                    {% for i in incidencias %}
+                        <li><strong>{{ i.nombre }} {{ i.apellidos }}</strong>: {{ i.texto }} <em>({{ i.timestamp }})</em></li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p>No hay incidencias registradas hoy.</p>
+            {% endif %}
+        </section>
+
+        <div class="volver"><a href="{{ url_for('home') }}">Volver al menú</a></div>
+    </main>
+</body>
+</html>

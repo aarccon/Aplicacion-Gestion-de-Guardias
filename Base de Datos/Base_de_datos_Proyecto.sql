@@ -104,6 +104,8 @@ CREATE TABLE Ausencias (
     fecha DATE NOT NULL,
     id_tramo_ausencias INT NOT NULL,
     motivo TEXT,
+    reincorporado_profesor BOOLEAN DEFAULT FALSE,
+    validacción_direccion BOOLEAN DEFAULT FALSE,
     FOREIGN KEY (dni_profesor_ausencias) REFERENCES Profesores(dni) ON DELETE CASCADE,
     FOREIGN KEY (id_tramo_ausencias) REFERENCES Tramos_Horarios(id_tramo),
     UNIQUE (dni_profesor_ausencias, fecha, id_tramo_ausencias)

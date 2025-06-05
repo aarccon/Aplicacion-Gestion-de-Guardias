@@ -85,30 +85,47 @@ def subir_profesores():
             archivo = request.files['archivo']
             if archivo.filename.endswith('.csv'):
                 connection = get_db_connection()
-                with connection.cursor() as cursor:
-                    try:
-                        reader = csv.DictReader(TextIOWrapper(archivo, encoding='utf-8'))
-                        insertados = 0
+                try:
+                    archivo_stream = TextIOWrapper(archivo, encoding='utf-8')
+                    reader = csv.DictReader(archivo_stream)
+                    
+                    insertados = 0
+                    with connection.cursor(pymysql.cursors.DictCursor) as cursor:
                         for row in reader:
-                            cursor.execute("SELECT COUNT(*) FROM Profesores WHERE dni = %s OR email = %s", (row['dni'], row['email']))
-                            if cursor.fetchone()[0] == 0:
+                            cursor.execute(
+                                "SELECT COUNT(*) AS cuenta FROM Profesores WHERE dni = %s OR email = %s",
+                                (row['dni'], row['email'])
+                            )
+                            resultado = cursor.fetchone()
+                            if resultado['cuenta'] == 0:
                                 cursor.execute("""
                                     INSERT INTO Profesores (dni, nombre, apellidos, email, password, puntos_guardia, id_perfil_profesores)
                                     VALUES (%s, %s, %s, %s, %s, %s, %s)
-                                """, (row['dni'], row['nombre'], row['apellidos'], row['email'], row['password'], row.get('puntos_guardia', 0), row['id_perfil_profesores']))
+                                """, (
+                                    row['dni'],
+                                    row['nombre'],
+                                    row['apellidos'],
+                                    row['email'],
+                                    row['password'],
+                                    int(row.get('puntos_guardia', 0)),
+                                    int(row['id_perfil_profesores'])
+                                ))
                                 insertados += 1
                         connection.commit()
                         mensaje = f"Se han insertado {insertados} profesores nuevos."
-                    except Exception as e:
-                        mensaje = f"Error al procesar el archivo: {str(e)}"
-                connection.close()
+                except Exception as ex:
+                    mensaje = f"Error al procesar el archivo: {str(ex)}"
+                finally:
+                    connection.close()
             else:
-                mensaje = "El archivo debe ser CSV."
+                mensaje = "El archivo debe ser .csv"
 
     return render_template('subir_profesores.html', mensaje=mensaje)
 
+
 @app.route('/subida_horarios', methods=['GET', 'POST'])
 def subir_horarios():
+
     mensaje = ""
     if request.method == 'POST':
         if 'archivo' not in request.files:
@@ -117,28 +134,60 @@ def subir_horarios():
             archivo = request.files['archivo']
             if archivo.filename.endswith('.csv'):
                 connection = get_db_connection()
-                with connection.cursor() as cursor:
-                    try:
-                        reader = csv.DictReader(TextIOWrapper(archivo, encoding='utf-8'))
-                        insertados = 0
+                try:
+                    archivo_stream = TextIOWrapper(archivo, encoding='utf-8')
+                    reader = csv.DictReader(archivo_stream)
+
+                    # Validar que se han detectado cabeceras
+                    if not reader.fieldnames:
+                        mensaje = "El archivo CSV no contiene cabeceras válidas."
+                        return render_template('subir_horarios.html', mensaje=mensaje)
+
+                    columnas_esperadas = ['dni_profesor_horarios', 'id_dia_horarios', 'id_tramo_horarios', 'id_grupo_horarios', 'id_asignatura_horarios', 'id_aula']
+                    print("Cabeceras detectadas:", reader.fieldnames)
+
+                    for col in columnas_esperadas:
+                        if col not in reader.fieldnames:
+                            mensaje = f"Falta la columna '{col}' en el archivo CSV."
+                            return render_template('subir_horarios.html', mensaje=mensaje)
+
+                    insertados = 0
+                    with connection.cursor(pymysql.cursors.DictCursor) as cursor:
                         for row in reader:
+                            print("Fila leída:", row)
                             cursor.execute("""
-                                SELECT COUNT(*) FROM Horarios
+                                SELECT COUNT(*) AS total
+                                FROM Horarios
                                 WHERE dni_profesor_horarios = %s AND id_dia_horarios = %s AND id_tramo_horarios = %s
-                            """, (row['dni_profesor'], row['id_dia'], row['id_tramo']))
-                            if cursor.fetchone()[0] == 0:
+                            """, (
+                                row['dni_profesor_horarios'],
+                                int(row['id_dia_horarios']),
+                                int(row['id_tramo_horarios'])
+                            ))
+                            existe = cursor.fetchone()['total'] > 0
+
+                            if not existe:
                                 cursor.execute("""
                                     INSERT INTO Horarios (dni_profesor_horarios, id_dia_horarios, id_tramo_horarios, id_grupo_horarios, id_asignatura_horarios, id_aula)
                                     VALUES (%s, %s, %s, %s, %s, %s)
-                                """, (row['dni_profesor'], row['id_dia'], row['id_tramo'], row.get('id_grupo'), row['id_asignatura'], row.get('id_aula')))
+                                """, (
+                                    row['dni_profesor_horarios'],
+                                    int(row['id_dia_horarios']),
+                                    int(row['id_tramo_horarios']),
+                                    int(row['id_grupo_horarios']) if row['id_grupo_horarios'] else None,
+                                    int(row['id_asignatura_horarios']),
+                                    int(row['id_aula']) if row['id_aula'] else None
+                                ))
                                 insertados += 1
+
                         connection.commit()
                         mensaje = f"Se han insertado {insertados} registros de horario nuevos."
-                    except Exception as e:
-                        mensaje = f"Error al procesar el archivo: {str(e)}"
-                connection.close()
+                except Exception as e:
+                    mensaje = f"Error al procesar el archivo: {str(e)}"
+                finally:
+                    connection.close()
             else:
-                mensaje = "El archivo debe ser CSV."
+                mensaje = "El archivo debe ser .csv"
 
     return render_template('subir_horarios.html', mensaje=mensaje)
 
@@ -433,6 +482,84 @@ def comunicar_ausencia():
 
     return render_template('comunicar_ausencia.html', tramos=tramos, mensaje=mensaje)
 
+@app.route('/ausencias/reincorporacion', methods=['GET', 'POST'])
+def comunicar_reincorporacion():
+    if 'usuario_dni' not in session:
+        return redirect(url_for('login'))
+
+    mensaje = ""
+    connection = get_db_connection()
+    dni = session['usuario_dni']
+    hoy = date.today()
+
+    with connection.cursor(pymysql.cursors.DictCursor) as cursor:
+        cursor.execute("""
+            SELECT a.id_ausencia, t.horario, a.fecha
+            FROM Ausencias a
+            JOIN Tramos_Horarios t ON a.id_tramo_ausencias = t.id_tramo
+            WHERE a.dni_profesor_ausencias = %s AND a.fecha = %s
+              AND a.reincorporado_profesor = FALSE
+        """, (dni, hoy))
+        ausencias = cursor.fetchall()
+
+        if request.method == 'POST':
+            ids_reincorporados = request.form.getlist('reincorporados')
+            for id_aus in ids_reincorporados:
+                cursor.execute("""
+                    UPDATE Ausencias
+                    SET reincorporado_profesor = TRUE
+                    WHERE id_ausencia = %s
+                """, (id_aus,))
+            connection.commit()
+            mensaje = "Reincorporación enviada para validación de dirección."
+
+    connection.close()
+    return render_template('comunicar_reincorporacion.html', ausencias=ausencias, mensaje=mensaje)
+
+@app.route('/ausencias/validar_reincorporacion', methods=['GET', 'POST'])
+def validar_reincorporacion():
+    if 'usuario_dni' not in session:
+        return redirect(url_for('login'))
+
+    connection = get_db_connection()
+
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT id_perfil_profesores FROM Profesores WHERE dni = %s", (session['usuario_dni'],))
+        perfil = cursor.fetchone()
+
+        if perfil['id_perfil_profesores'] != 2:  # Solo dirección
+            connection.close()
+            return redirect(url_for('home'))
+
+    mensaje = ""
+    hoy = date.today()
+
+    with connection.cursor(pymysql.cursors.DictCursor) as cursor:
+        cursor.execute("""
+            SELECT a.id_ausencia, p.nombre, p.apellidos, t.horario, a.fecha
+            FROM Ausencias a
+            JOIN Profesores p ON a.dni_profesor_ausencias = p.dni
+            JOIN Tramos_Horarios t ON a.id_tramo_ausencias = t.id_tramo
+            WHERE a.fecha = %s
+              AND a.reincorporado_profesor = TRUE
+              AND a.validacción_direccion = FALSE
+        """, (hoy,))
+        ausencias = cursor.fetchall()
+
+        if request.method == 'POST':
+            ids_validadas = request.form.getlist('validadas')
+            for id_aus in ids_validadas:
+                cursor.execute("""
+                    UPDATE Ausencias
+                    SET validacción_direccion = TRUE
+                    WHERE id_ausencia = %s
+                """, (id_aus,))
+            connection.commit()
+            mensaje = "Reincorporaciones validadas correctamente."
+
+    connection.close()
+    return render_template('validar_reincorporacion.html', ausencias=ausencias, mensaje=mensaje)
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -498,6 +625,55 @@ def eliminar_mensaje(id):
     from bson.objectid import ObjectId
     coleccion_mensajes.delete_one({'_id': ObjectId(id)})
     return redirect(url_for('chat'))
+
+@app.route('/guardias/hoy', methods=['GET', 'POST'])
+def guardias_hoy():
+    if 'usuario_dni' not in session:
+        return redirect(url_for('login'))
+
+    mensaje = ""
+    connection = get_db_connection()
+    hoy = date.today()
+    guardias = []
+    incidencias = []
+
+    with connection.cursor(pymysql.cursors.DictCursor) as cursor:
+        # Obtener todas las guardias del día actual
+        cursor.execute("""
+            SELECT g.id_guardia, p.nombre, p.apellidos, th.horario, g.aula_zona
+            FROM Guardias g
+            JOIN Profesores p ON g.dni_profesor_guardias = p.dni
+            JOIN Tramos_Horarios th ON g.id_tramo_guardias = th.id_tramo
+            WHERE g.id_dia_guardias = WEEKDAY(%s) + 1
+            ORDER BY th.id_tramo
+        """, (hoy,))
+        guardias = cursor.fetchall()
+
+        # Registrar nueva incidencia
+        if request.method == 'POST':
+            id_guardia = request.form['id_guardia']
+            texto = request.form['texto']
+            if texto.strip():
+                cursor.execute("""
+                    INSERT INTO Incidencias (id_guardia_incidencias, texto)
+                    VALUES (%s, %s)
+                """, (id_guardia, texto.strip()))
+                connection.commit()
+                mensaje = "Incidencia registrada correctamente."
+
+        # Obtener todas las incidencias del día
+        cursor.execute("""
+            SELECT i.texto, i.timestamp, p.nombre, p.apellidos
+            FROM Incidencias i
+            JOIN Guardias g ON i.id_guardia_incidencias = g.id_guardia
+            JOIN Profesores p ON g.dni_profesor_guardias = p.dni
+            WHERE DATE(i.timestamp) = %s
+            ORDER BY i.timestamp DESC
+        """, (hoy,))
+        incidencias = cursor.fetchall()
+
+    connection.close()
+    return render_template('guardias_hoy.html', guardias=guardias, incidencias=incidencias, mensaje=mensaje)
 
 @app.route('/logout')
 def logout():
