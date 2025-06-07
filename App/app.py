@@ -19,26 +19,87 @@ db=mongo_client
 app = Flask(__name__)
 app.secret_key = SECRET_KEY
 
+# Función que se activa cuando se accede a la raíz del sitio web, esta función vale para redirigir a los usuarios que se encuentran logueados o no logueados cuando
+# acceden a la raíz
+
 @app.route('/')
 def root():
+    # Comprobamos que el usuario que ha iniciado sesión contiene su DNI guardado en la sesión
     if 'usuario_dni' in session:
+
+        # Si el usuario se ha logueado con el DNI lo lleva a la página principal que es /home
         return redirect(url_for('home'))
+    
+    # Si el usuario no se encuentra logueado, lo lleva a la página de logueo que es /login
     return redirect(url_for('login'))
 
+# Función que se activa cuando accedemos a /home
 @app.route('/home')
 def home():
+    # Comprobamos que el usuario se ha autenticado
     if 'usuario_dni' in session:
+        # Realizamos una conexión a la base de datos
         connection = get_db_connection()
         with connection.cursor() as cursor:
+            # Realizamos una consulta a la base de datos en la cual nos devolverá el perfil que tiene el profesor con el DNI que se ha logueado.
             cursor.execute("SELECT id_perfil_profesores FROM Profesores WHERE dni = %s", (session['usuario_dni'],))
             perfil = cursor.fetchone()
         connection.close()
 
+        # Si el perfil que nos devuelve del usuario es 1, indicamos que es un profesor y hace que cargue la plantilla html para profesores
         if perfil and perfil['id_perfil_profesores'] == 1:
             return render_template('home_profesor.html', username=session.get('username'))
         else:
+            # En caso de ser dirección u otro diferente carga la plantilla html de dirección que es la home
             return render_template('home.html', username=session.get('username'))
     return redirect(url_for('login'))
+
+# Función que muestra el horario del profesor que se encuentra actualmente logueado.
+@app.route('/horario')
+def ver_horario():
+    # En caso de que no haya una sesión iniciada, lo redirige al login para que el usuario se logue
+    if 'usuario_dni' not in session:
+        return redirect(url_for('login'))
+
+    # Se realiza una conexión a la base de datos
+    connection = get_db_connection()
+    with connection.cursor() as cursor:
+        # Realizamos la primera consulta la cual obtendrá todos los días de la semana que hay en esa tabla y lo ordena por el identificador y los valores que devuelve
+        # los almacena en la variable días.
+        cursor.execute("SELECT * FROM Dias_Semana ORDER BY id_dia")
+        dias = cursor.fetchall()
+
+        # Realizamos una segunda consulta en la cual obtenemos todos los tramos horarios que hay en esa tabla, esta se encuentra ordenador por el identificador 
+        # y los valores que devuelve los almacena en la variable tramos.
+        cursor.execute("SELECT * FROM Tramos_Horarios ORDER BY id_tramo")
+        tramos = cursor.fetchall()
+
+        # Realizamos esta tercera consulta en la cual obtenemos el horario del profesor que hay actualmente logueado.
+        cursor.execute("""
+            SELECT horarios.id_dia_horarios, horarios.id_tramo_horarios, asignaturas.nombre AS asignatura, grupo.nombre AS grupo, aula.nombre AS aula
+            FROM Horarios horarios
+            JOIN Asignaturas asignaturas ON horarios.id_asignatura_horarios = asignaturas.id_asignatura
+            LEFT JOIN Grupos grupo ON horarios.id_grupo_horarios = grupo.id_grupo
+            LEFT JOIN Aulas aula ON horarios.id_aula = aula.id_aula
+            WHERE horarios.dni_profesor_horarios = %s
+        """, (session['usuario_dni'],))
+        datos = cursor.fetchall()
+
+    # Cerramos la conexión de la base de datos
+    connection.close()
+
+    # Crear diccionario clave: (id_dia, id_tramo) => valor con asignatura, grupo y aula
+    horario = {}
+    for fila in datos:
+        clave = (fila['id_dia_horarios'], fila['id_tramo_horarios'])
+        horario[clave] = {
+            'asignatura': fila['asignatura'],
+            'grupo': fila['grupo'] or '',
+            'aula': fila['aula'] or ''
+        }
+
+    return render_template("ver_horario.html", dias=dias, tramos=tramos, horario=horario)
+
 
 @app.route('/profesores/registrar', methods=['GET', 'POST'])
 def registrar_profesor():
@@ -193,47 +254,7 @@ def subir_horarios():
 
 # Visualización de Horario del Profesor y Filtración para Visualizar Horarios de Otros Profesores
 
-@app.route('/horario')
-def ver_horario():
-    if 'usuario_dni' not in session:
-        return redirect(url_for('login'))
 
-    connection = get_db_connection()
-    with connection.cursor() as cursor:
-        cursor.execute("SELECT * FROM Dias_Semana ORDER BY id_dia")
-        dias = cursor.fetchall()
-
-        cursor.execute("SELECT * FROM Tramos_Horarios ORDER BY id_tramo")
-        tramos = cursor.fetchall()
-
-        cursor.execute("""
-            SELECT
-                h.id_dia_horarios,
-                h.id_tramo_horarios,
-                a.nombre AS asignatura,
-                g.nombre AS grupo,
-                au.nombre AS aula
-            FROM Horarios h
-            JOIN Asignaturas a ON h.id_asignatura_horarios = a.id_asignatura
-            LEFT JOIN Grupos g ON h.id_grupo_horarios = g.id_grupo
-            LEFT JOIN Aulas au ON h.id_aula = au.id_aula
-            WHERE h.dni_profesor_horarios = %s
-        """, (session['usuario_dni'],))
-        datos = cursor.fetchall()
-
-    connection.close()
-
-    # Crear diccionario clave: (id_dia, id_tramo) => valor con asignatura, grupo y aula
-    horario = {}
-    for fila in datos:
-        clave = (fila['id_dia_horarios'], fila['id_tramo_horarios'])
-        horario[clave] = {
-            'asignatura': fila['asignatura'],
-            'grupo': fila['grupo'] or '',
-            'aula': fila['aula'] or ''
-        }
-
-    return render_template("ver_horario.html", dias=dias, tramos=tramos, horario=horario)
 
 @app.route('/horario/otros', methods=['GET', 'POST'])
 def ver_horario_profesores():
@@ -266,105 +287,33 @@ def ver_horario_profesores():
     connection.close()
     return render_template("ver_horario_profesores.html", profesores=profesores, horario=horario, profesor_dni=profesor_seleccionado)
     
-# Sigue sin comentar
+
 @app.route('/guardias/asignadas')
 def guardias_asignadas():
     if 'usuario_dni' not in session:
         return redirect(url_for('login'))
 
     connection = get_db_connection()
-    with connection.cursor() as cursor:
+    #hoy = date.today()
+    hoy = date(2025, 6,9)
+    
+    with connection.cursor(pymysql.cursors.DictCursor) as cursor:
         cursor.execute("""
-            SELECT ds.nombre AS dia, th.horario, g.aula_zona
+            SELECT 
+                th.horario,
+                IFNULL(a.nombre, 'No especificada') AS aula_nombre
             FROM Guardias g
-            JOIN Dias_Semana ds ON g.id_dia_guardias = ds.id_dia
             JOIN Tramos_Horarios th ON g.id_tramo_guardias = th.id_tramo
+            LEFT JOIN Aulas a ON g.id_aula_guardias = a.id_aula
             WHERE g.dni_profesor_guardias = %s
-            ORDER BY ds.id_dia, th.id_tramo
-        """, (session['usuario_dni'],))
+              AND g.id_dia_guardias = WEEKDAY(%s) + 1
+            ORDER BY th.id_tramo
+        """, (session['usuario_dni'], hoy))
+
         guardias = cursor.fetchall()
+
     connection.close()
     return render_template('guardias_asignadas.html', guardias=guardias)
-
-@app.route('/guardias/asignar', methods=['GET', 'POST'])
-def asignar_guardia():
-    if 'usuario_dni' not in session:
-        return redirect(url_for('login'))
-
-    mensaje = ""
-    connection = get_db_connection()
-
-    with connection.cursor(pymysql.cursors.DictCursor) as cursor:
-        # Obtener días, tramos y profesores
-        cursor.execute("SELECT id_dia, nombre FROM Dias_Semana")
-        dias = cursor.fetchall()
-
-        cursor.execute("SELECT id_tramo, horario FROM Tramos_Horarios")
-        tramos = cursor.fetchall()
-
-        cursor.execute("SELECT dni, CONCAT(nombre, ' ', apellidos) AS nombre_completo FROM Profesores")
-        profesores = cursor.fetchall()
-
-        if request.method == 'POST':
-            profesor_dni = request.form['profesor_dni']
-            dia = request.form['dia']
-            tramo = request.form['tramo']
-            aula = request.form['aula']
-
-            # Validar que hay una ausencia registrada hoy para ese tramo
-            cursor.execute("""
-                SELECT COUNT(*) AS existe
-                FROM Ausencias
-                WHERE fecha = CURDATE() AND id_tramo_ausencias = %s
-            """, (tramo,))
-            hay_ausencia = cursor.fetchone()['existe'] > 0
-
-            if not hay_ausencia:
-                mensaje = "No hay ninguna ausencia registrada para ese tramo hoy."
-            else:
-                # Verificar si el profesor tiene la asignatura 'Guardia'
-                cursor.execute("""
-                    SELECT COUNT(*) AS tiene_guardia
-                    FROM Horarios h
-                    JOIN Asignaturas a ON h.id_asignatura_horarios = a.id_asignatura
-                    WHERE h.dni_profesor_horarios = %s AND a.nombre LIKE 'Guardia%%'
-                """, (profesor_dni,))
-                tiene_guardia = cursor.fetchone()['tiene_guardia'] > 0
-
-                if not tiene_guardia:
-                    mensaje = "El profesor no tiene asignada la asignatura de Guardia y no puede cubrir guardias."
-                else:
-                    # Verificar si el profesor tiene clase en ese día y tramo
-                    cursor.execute("""
-                        SELECT COUNT(*) AS total
-                        FROM Horarios
-                        WHERE dni_profesor_horarios = %s AND id_dia_horarios = %s AND id_tramo_horarios = %s
-                    """, (profesor_dni, dia, tramo))
-                    ocupado = cursor.fetchone()['total'] > 0
-
-                    if ocupado:
-                        mensaje = "El profesor tiene clase en ese horario y no se puede asignar guardia."
-                    else:
-                        try:
-                            cursor.execute("""
-                                INSERT INTO Guardias (dni_profesor_guardias, id_dia_guardias, id_tramo_guardias, aula_zona)
-                                VALUES (%s, %s, %s, %s)
-                            """, (profesor_dni, dia, tramo, aula))
-
-                            cursor.execute("""
-                                UPDATE Profesores
-                                SET puntos_guardia = puntos_guardia + 1
-                                WHERE dni = %s
-                            """, (profesor_dni,))
-
-                            connection.commit()
-                            mensaje = "Guardia asignada correctamente."
-                        except pymysql.err.IntegrityError:
-                            mensaje = "Ya existe una guardia registrada para ese profesor en ese tramo."
-
-    connection.close()
-    return render_template('asignar_guardia.html', dias=dias, tramos=tramos, profesores=profesores, mensaje=mensaje)
-
 
 @app.route('/incidencias/reportar', methods=['GET', 'POST'])
 def reportar_incidencia():
@@ -605,7 +554,7 @@ def enviar_mensaje():
             "autor": session['usuario_dni'],
             "nombre": session['username'],
             "mensaje": mensaje.strip(),
-            "timestamp": datetime.datetime.utcnow(),
+            "timestamp": datetime.utcnow(),
             "archivado": False
         })
     return redirect(url_for('chat'))
@@ -626,54 +575,123 @@ def eliminar_mensaje(id):
     coleccion_mensajes.delete_one({'_id': ObjectId(id)})
     return redirect(url_for('chat'))
 
-@app.route('/guardias/hoy', methods=['GET', 'POST'])
-def guardias_hoy():
+@app.route('/puntuaciones', methods=['GET', 'POST'])
+def gestionar_puntuaciones():
     if 'usuario_dni' not in session:
         return redirect(url_for('login'))
 
-    mensaje = ""
     connection = get_db_connection()
-    hoy = date.today()
-    guardias = []
-    incidencias = []
+    mensaje = ""
+
+    if request.method == 'POST':
+        with connection.cursor() as cursor:
+            if 'resetear' in request.form:
+                cursor.execute("UPDATE Profesores SET puntos_guardia = 0")
+                mensaje = "Todas las puntuaciones se han restablecido."
+
+            elif 'subir' in request.form:
+                dni = request.form['subir']
+                cursor.execute("UPDATE Profesores SET puntos_guardia = puntos_guardia + 1 WHERE dni = %s", (dni,))
+                mensaje = f"Puntos aumentados para el profesor {dni}."
+
+            elif 'bajar' in request.form:
+                dni = request.form['bajar']
+                cursor.execute("""
+                    UPDATE Profesores
+                    SET puntos_guardia = CASE
+                        WHEN puntos_guardia > 0 THEN puntos_guardia - 1
+                        ELSE 0
+                    END
+                    WHERE dni = %s
+                """, (dni,))
+                mensaje = f"Puntos reducidos para el profesor {dni}."
+
+            connection.commit()
 
     with connection.cursor(pymysql.cursors.DictCursor) as cursor:
-        # Obtener todas las guardias del día actual
         cursor.execute("""
-            SELECT g.id_guardia, p.nombre, p.apellidos, th.horario, g.aula_zona
-            FROM Guardias g
-            JOIN Profesores p ON g.dni_profesor_guardias = p.dni
-            JOIN Tramos_Horarios th ON g.id_tramo_guardias = th.id_tramo
-            WHERE g.id_dia_guardias = WEEKDAY(%s) + 1
-            ORDER BY th.id_tramo
-        """, (hoy,))
-        guardias = cursor.fetchall()
-
-        # Registrar nueva incidencia
-        if request.method == 'POST':
-            id_guardia = request.form['id_guardia']
-            texto = request.form['texto']
-            if texto.strip():
-                cursor.execute("""
-                    INSERT INTO Incidencias (id_guardia_incidencias, texto)
-                    VALUES (%s, %s)
-                """, (id_guardia, texto.strip()))
-                connection.commit()
-                mensaje = "Incidencia registrada correctamente."
-
-        # Obtener todas las incidencias del día
-        cursor.execute("""
-            SELECT i.texto, i.timestamp, p.nombre, p.apellidos
-            FROM Incidencias i
-            JOIN Guardias g ON i.id_guardia_incidencias = g.id_guardia
-            JOIN Profesores p ON g.dni_profesor_guardias = p.dni
-            WHERE DATE(i.timestamp) = %s
-            ORDER BY i.timestamp DESC
-        """, (hoy,))
-        incidencias = cursor.fetchall()
+            SELECT dni, nombre, apellidos, puntos_guardia
+            FROM Profesores
+            ORDER BY puntos_guardia DESC
+        """)
+        puntuaciones = cursor.fetchall()
 
     connection.close()
-    return render_template('guardias_hoy.html', guardias=guardias, incidencias=incidencias, mensaje=mensaje)
+    return render_template('gestionar_puntuaciones.html', puntuaciones=puntuaciones, mensaje=mensaje)
+
+@app.route('/guardias/gestionar', methods=['GET', 'POST'])
+def gestionar_guardias():
+    if 'usuario_dni' not in session:
+        return redirect(url_for('login'))
+
+    connection = get_db_connection()
+    mensaje = ""
+    
+    fecha_ficticia = date(2025, 6, 9)  # Lunes 9 junio 2025
+    dia_semana = fecha_ficticia.weekday() + 1
+
+    with connection.cursor(pymysql.cursors.DictCursor) as cursor:
+        # Obtener TODOS los tramos con ausencia para ese día
+        cursor.execute("""
+            SELECT 
+                th.id_tramo, 
+                th.horario,
+                a.nombre AS aula_nombre,
+                (
+                    SELECT GROUP_CONCAT(CONCAT(p.nombre, ' ', p.apellidos) SEPARATOR ', ')
+                    FROM Guardias g
+                    JOIN Profesores p ON g.dni_profesor_guardias = p.dni
+                    WHERE g.id_dia_guardias = %s AND g.id_tramo_guardias = th.id_tramo
+                ) AS profesores_asignados
+            FROM Tramos_Horarios th
+            JOIN Ausencias aus ON aus.id_tramo_ausencias = th.id_tramo AND aus.fecha = %s
+            LEFT JOIN Aulas a ON a.id_aula = aus.id_tramo_ausencias  -- Asumimos aula = id_tramo para simplificar
+            GROUP BY th.id_tramo, th.horario, a.nombre
+            ORDER BY th.id_tramo
+        """, (dia_semana, fecha_ficticia))
+        guardias_dia = cursor.fetchall()
+
+        # Profesores disponibles para cada tramo con asignatura "Guardia"
+        profesores_disponibles = {}
+        for guardia in guardias_dia:
+            cursor.execute("""
+                SELECT p.dni, p.nombre, p.apellidos
+                FROM Horarios h
+                JOIN Asignaturas a ON h.id_asignatura_horarios = a.id_asignatura
+                JOIN Profesores p ON h.dni_profesor_horarios = p.dni
+                WHERE h.id_dia_horarios = %s AND h.id_tramo_horarios = %s
+                  AND a.nombre LIKE 'Guardia%%'
+                  AND NOT EXISTS (
+                      SELECT 1 FROM Horarios h2
+                      WHERE h2.dni_profesor_horarios = p.dni
+                        AND h2.id_dia_horarios = %s
+                        AND h2.id_tramo_horarios = %s
+                        AND h2.id_asignatura_horarios != a.id_asignatura
+                  )
+            """, (dia_semana, guardia['id_tramo'], dia_semana, guardia['id_tramo']))
+            profesores_disponibles[guardia['id_tramo']] = cursor.fetchall()
+
+        # Procesar POST si se asignan guardias
+        if request.method == 'POST':
+            for clave, valores in request.form.lists():
+                if clave.startswith("tramo_"):
+                    tramo_id = int(clave.split("_")[1])
+                    for dni_profesor in valores:
+                        cursor.execute("""
+                            INSERT IGNORE INTO Guardias (dni_profesor_guardias, id_dia_guardias, id_tramo_guardias)
+                            VALUES (%s, %s, %s)
+                        """, (dni_profesor, dia_semana, tramo_id))
+                        cursor.execute("""
+                            UPDATE Profesores SET puntos_guardia = puntos_guardia + 1 WHERE dni = %s
+                        """, (dni_profesor,))
+            connection.commit()
+            mensaje = "Guardias asignadas correctamente."
+
+    connection.close()
+    return render_template('gestionar_guardias.html',
+                           guardias_dia=guardias_dia,
+                           profesores_disponibles=profesores_disponibles,
+                           mensaje=mensaje)
 
 @app.route('/logout')
 def logout():

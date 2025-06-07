@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Gestión de Guardias del Día</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/gestionar_guardias.css') }}">
+    <meta http-equiv="refresh" content="3">
+</head>
+<body>
+    <div class="banner">
+        <img src="{{ url_for('static', filename='img/logo_Aplicacion.png') }}" class="logo" alt="Logo Izquierda">
+        <h1 class="titulo-banner">Gestión de Guardias del Día</h1>
+        <img src="{{ url_for('static', filename='img/logo_Instituto.png') }}" class="logo" alt="Logo Derecha">
+    </div>
+
+    <main>
+        <div class="tabla-container">
+            <h2>Guardias del Día de Hoy</h2>
+
+            {% if mensaje %}
+                <div class="mensaje-exito">{{ mensaje }}</div>
+            {% endif %}
+
+            <form method="POST">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Tramo</th>
+                            <th>Aula/Zona</th>
+                            <th>Profesores Asignados</th>
+                            <th>Estado</th>
+                            <th>Asignar</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for tramo in guardias_dia %}
+                            <tr>
+                                <td>{{ tramo.horario }}</td>
+                                <td>{{ tramo.aula_nombre or 'No asignada' }}</td>
+                                <td>{{ tramo.profesores_asignados or 'Ninguno' }}</td>
+                                <td>{{ 'Asignada' if tramo.profesores_asignados else 'Pendiente' }}</td>
+                                <td>
+                                    {% if not tramo.profesores_asignados %}
+                                        {% if profesores_disponibles[tramo.id_tramo] %}
+                                            <select name="tramo_{{ tramo.id_tramo }}" multiple>
+                                                {% for prof in profesores_disponibles[tramo.id_tramo] %}
+                                                    <option value="{{ prof.dni }}">{{ prof.nombre }} {{ prof.apellidos }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        {% else %}
+                                            Sin profesores disponibles
+                                        {% endif %}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+
+                <button type="submit">Guardar Asignaciones</button>
+            </form>
+        </div>
+    </main>
+</body>
+</html>

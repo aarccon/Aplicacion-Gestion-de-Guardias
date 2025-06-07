@@ -1,0 +1,85 @@
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    background: linear-gradient(to bottom, #f0f9ff, #e0f7fa);
+    color: #1e293b;
+}
+
+.banner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: linear-gradient(to right, #34d399, #3b82f6);
+    padding: 10px 40px;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.logo {
+    height: 55px;
+    width: auto;
+}
+
+.titulo-banner {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    color: white;
+    font-size: 22px;
+    font-weight: bold;
+}
+
+main {
+    padding: 40px 20px;
+    display: flex;
+    justify-content: center;
+}
+
+.tabla-container {
+    background: white;
+    padding: 30px;
+    border-radius: 20px;
+    box-shadow: 0 6px 30px rgba(0, 0, 0, 0.08);
+    max-width: 800px;
+    width: 100%;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th, td {
+    padding: 12px 15px;
+    border: 1px solid #e2e8f0;
+    text-align: center;
+}
+
+th {
+    background-color: #e0f2fe;
+    font-weight: bold;
+    color: #0f172a;
+}
+
+.mensaje {
+    padding: 15px;
+    background-color: #fef2f2;
+    color: #b91c1c;
+    border: 1px solid #fecaca;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.volver {
+    margin-top: 20px;
+    text-align: center;
+}
+
+.volver a {
+    color: #3b82f6;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.volver a:hover {
+    text-decoration: underline;
+}

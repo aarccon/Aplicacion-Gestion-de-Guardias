@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Gestión de Puntuaciones</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/gestionar_puntuaciones.css') }}">
+</head>
+<body>
+    <div class="banner">
+        <img src="{{ url_for('static', filename='img/logo_Aplicacion.png') }}" class="logo" alt="Logo Izquierda">
+        <h1 class="titulo-banner">Gestión de Puntuaciones</h1>
+        <img src="{{ url_for('static', filename='img/logo_Instituto.png') }}" class="logo" alt="Logo Derecha">
+    </div>
+
+    <main>
+        <div class="form-container">
+            {% if mensaje %}
+                <p class="mensaje success">{{ mensaje }}</p>
+            {% endif %}
+
+            <form method="POST">
+                <button type="submit" name="resetear" class="boton-reset">Restablecer puntuaciones</button>
+            </form>
+
+            <table class="tabla-puntuaciones">
+                <thead>
+                    <tr>
+                        <th>DNI</th>
+                        <th>Nombre</th>
+                        <th>Apellidos</th>
+                        <th>Puntos</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for prof in puntuaciones %}
+                    <tr>
+                        <td>{{ prof.dni }}</td>
+                        <td>{{ prof.nombre }}</td>
+                        <td>{{ prof.apellidos }}</td>
+                        <td>{{ prof.puntos_guardia }}</td>
+                        <td>
+                            <form method="POST" style="display:inline;">
+                                <button type="submit" name="subir" value="{{ prof.dni }}">▲</button>
+                            </form>
+                            <form method="POST" style="display:inline;">
+                                <button type="submit" name="bajar" value="{{ prof.dni }}">▼</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <div class="volver">
+                <a href="{{ url_for('home') }}">Volver al menú</a>
+            </div>
+        </div>
+    </main>
+</body>
+</html>

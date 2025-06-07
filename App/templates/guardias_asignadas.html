@@ -1,18 +1,41 @@
 <!DOCTYPE html>
-<html>
-<head><title>Guardias Asignadas</title></head>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Guardias del Día</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/guardias_asignadas.css') }}">
+</head>
 <body>
-    <h2>Guardias asignadas</h2>
-    <table border="1">
-        <tr><th>Día</th><th>Hora</th><th>Aula/Zona</th></tr>
-        {% for guardia in guardias %}
-        <tr>
-            <td>{{ guardia.dia }}</td>
-            <td>{{ guardia.horario }}</td>
-            <td>{{ guardia.aula_zona }}</td>
-        </tr>
-        {% endfor %}
-    </table>
-    <a href="{{ url_for('home') }}">Volver</a>
+    <div class="banner">
+        <img src="{{ url_for('static', filename='img/logo_Aplicacion.png') }}" class="logo" alt="Logo Izquierda">
+        <h1 class="titulo-banner">Guardias del Día de Hoy</h1>
+        <img src="{{ url_for('static', filename='img/logo_Instituto.png') }}" class="logo" alt="Logo Derecha">
+    </div>
+
+    <main>
+        <div class="tabla-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Tramo Horario</th>
+                        <th>Aula/Zona</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for g in guardias %}
+                        <tr>
+                            <td>{{ g.horario }}</td>
+                            <td>{{ g.aula_nombre }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <div class="volver">
+                <a href="{{ url_for('home') }}">Volver al Menú</a>
+            </div>
+        </div>
+    </main>
 </body>
 </html>
+

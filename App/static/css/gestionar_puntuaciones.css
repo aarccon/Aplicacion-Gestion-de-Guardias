@@ -1,0 +1,139 @@
+body {
+    margin: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(to bottom, #f0f9ff, #e0f7fa);
+    color: #1e293b;
+}
+
+/* Banner */
+.banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: linear-gradient(to right, #34d399, #3b82f6);
+    padding: 10px 40px;
+    border-bottom: 2px solid #e2e8f0;
+    position: relative;
+}
+
+.logo {
+    height: 55px;
+    width: auto;
+}
+
+.titulo-banner {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 24px;
+    color: white;
+    font-weight: 600;
+    margin: 0;
+}
+
+/* Contenido principal */
+main {
+    padding: 40px 20px;
+    display: flex;
+    justify-content: center;
+}
+
+.form-container {
+    background-color: white;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 6px 30px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 950px;
+}
+
+.mensaje {
+    text-align: center;
+    padding: 10px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+    font-weight: bold;
+}
+
+.success {
+    background-color: #dcfce7;
+    color: #16a34a;
+    border: 1px solid #86efac;
+}
+
+/* Tabla */
+.tabla-puntuaciones {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    font-size: 15px;
+}
+
+.tabla-puntuaciones th,
+.tabla-puntuaciones td {
+    border: 1px solid #cbd5e1;
+    padding: 12px;
+    text-align: center;
+}
+
+.tabla-puntuaciones th {
+    background-color: #e0f2fe;
+    color: #0f172a;
+}
+
+.tabla-puntuaciones td {
+    background-color: #ffffff;
+}
+
+.tabla-puntuaciones button {
+    padding: 4px 10px;
+    margin: 0 2px;
+    font-size: 14px;
+    font-weight: bold;
+    color: white;
+    background-color: #3b82f6;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.tabla-puntuaciones button:hover {
+    background-color: #2563eb;
+}
+
+/* Botón reset */
+.boton-reset {
+    background-color: #3b82f6;
+    color: white;
+    font-weight: bold;
+    padding: 10px 20px;
+    margin-bottom: 20px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.boton-reset:hover {
+    background-color: #2563eb;
+}
+
+/* Volver */
+.volver {
+    margin-top: 25px;
+    text-align: center;
+}
+
+.volver a {
+    color: #3b82f6;
+    text-decoration: none;
+    font-weight: bold;
+    transition: color 0.2s ease;
+}
+
+.volver a:hover {
+    text-decoration: underline;
+    color: #1d4ed8;
+}

@@ -1,0 +1,119 @@
+/* === ENCABEZADO BANNER === */
+.banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: linear-gradient(to right, #34d399, #3b82f6);
+    padding: 10px 40px;
+    border-bottom: 2px solid #e2e8f0;
+    position: relative;
+}
+
+.logo {
+    height: 55px;
+    width: auto;
+}
+
+.titulo-banner {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 24px;
+    color: white;
+    font-weight: 600;
+    margin: 0;
+}
+
+/* === CUERPO GENERAL === */
+body {
+    margin: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(to bottom, #f0f9ff, #e0f7fa);
+    color: #1e293b;
+}
+
+main {
+    padding: 40px 20px;
+    display: flex;
+    justify-content: center;
+}
+
+.tabla-container {
+    background-color: white;
+    padding: 30px;
+    border-radius: 20px;
+    box-shadow: 0 6px 30px rgba(0, 0, 0, 0.08);
+    max-width: 1000px;
+    width: 100%;
+}
+
+.tabla-container h2 {
+    text-align: center;
+    color: #0f172a;
+    margin-bottom: 20px;
+}
+
+/* === TABLA === */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+}
+
+th, td {
+    padding: 12px 15px;
+    text-align: center;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+th {
+    background-color: #e0f2fe;
+    color: #0f172a;
+    font-weight: bold;
+}
+
+tr:nth-child(even) {
+    background-color: #f8fafc;
+}
+
+select {
+    padding: 6px 10px;
+    border-radius: 8px;
+    border: 1px solid #cbd5e1;
+    background-color: #f1f5f9;
+    font-size: 14px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* === BOTÓN ENVIAR === */
+button {
+    width: 100%;
+    margin-top: 20px;
+    padding: 14px;
+    background-color: #3b82f6;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+button:hover {
+    background-color: #2563eb;
+    transform: scale(1.02);
+}
+
+/* === MENSAJE DE ÉXITO === */
+.mensaje-exito {
+    padding: 12px;
+    background-color: #dcfce7;
+    color: #166534;
+    border: 1px solid #bbf7d0;
+    border-radius: 8px;
+    text-align: center;
+    font-weight: bold;
+    margin-bottom: 20px;
+}
