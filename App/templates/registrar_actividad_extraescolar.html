@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Registrar Actividad Extraescolar</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/registrar_actividad.css') }}">
+</head>
+<body>
+    <div class="banner">
+        <img src="{{ url_for('static', filename='img/logo_Aplicacion.png') }}" class="logo" alt="Logo Izquierda">
+        <h1 class="titulo-banner">Registrar Actividad Extraescolar</h1>
+        <img src="{{ url_for('static', filename='img/logo_Instituto.png') }}" class="logo" alt="Logo Derecha">
+    </div>
+
+    <main>
+        <div class="form-container">
+            <h2>Registrar Actividad</h2>
+            {% if mensaje %}
+                <div class="mensaje-exito">{{ mensaje }}</div>
+            {% endif %}
+            <form method="POST">
+                <div class="form-group">
+                    <label for="grupo">Grupo participante:</label>
+                    <select name="grupo" required>
+                        {% for grupo in grupos %}
+                            <option value="{{ grupo.id_grupo }}">{{ grupo.nombre }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="fecha">Fecha:</label>
+                    <input type="date" name="fecha" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="tramos">Tramos horarios:</label>
+                    <select name="tramos" multiple required>
+                        {% for tramo in tramos %}
+                            <option value="{{ tramo.id_tramo }}">{{ tramo.horario }}</option>
+                        {% endfor %}
+                    </select>
+                    <small style="color: #64748b; font-size: 13px;">Pulsa Ctrl o Cmd para seleccionar varios tramos</small>
+                </div>
+
+                <div class="form-group">
+                    <label><input type="checkbox" name="afecta_completo"> Afecta al grupo completo</label>
+                </div>
+
+                <div class="form-group">
+                    <label for="profesores">Profesores acompañantes:</label>
+                    <select name="profesores" multiple>
+                        {% for prof in profesores %}
+                            <option value="{{ prof.dni }}">{{ prof.nombre }} {{ prof.apellidos }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <button type="submit">Registrar Actividad</button>
+            </form>
+            <div class="volver">
+                <a href="{{ url_for('home') }}">Volver al Menú</a>
+            </div>
+        </div>
+    </main>
+</body>
+</html>

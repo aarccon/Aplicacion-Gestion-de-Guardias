@@ -1,4 +1,4 @@
-/* BANNER */
+/* === BANNER SUPERIOR === */
 .banner {
     display: flex;
     align-items: center;
@@ -6,7 +6,6 @@
     background: linear-gradient(to right, #34d399, #3b82f6);
     padding: 10px 40px;
     border-bottom: 2px solid #e2e8f0;
-    position: relative;
 }
 
 .logo {
@@ -15,16 +14,13 @@
 }
 
 .titulo-banner {
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
     font-size: 24px;
     color: white;
-    font-weight: 600;
-    margin: 0;
+    font-weight: bold;
+    margin: 0 auto;
 }
 
-/* CUERPO */
+/* === BODY === */
 body {
     margin: 0;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -32,59 +28,61 @@ body {
     color: #1e293b;
 }
 
-/* CONTENIDO PRINCIPAL */
+/* === FORMULARIO === */
 main {
-    padding: 40px 20px;
     display: flex;
     justify-content: center;
+    padding: 40px 20px;
 }
 
-/* FORMULARIO */
 .form-container {
     background-color: white;
-    padding: 30px;
-    border-radius: 12px;
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+    padding: 35px;
+    border-radius: 20px;
+    box-shadow: 0 6px 30px rgba(0, 0, 0, 0.1);
     max-width: 500px;
     width: 100%;
+    text-align: left;
 }
 
-.form-container h2 {
-    text-align: center;
-    color: #0f172a;
-    margin-bottom: 20px;
-}
-
-form {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-label {
-    font-weight: bold;
-    margin-top: 10px;
+/* === ELEMENTOS DEL FORMULARIO === */
+.form-container label {
+    font-weight: 600;
+    display: block;
+    margin-top: 18px;
+    margin-bottom: 8px;
     color: #334155;
 }
 
-input, select, textarea {
-    padding: 10px 12px;
+.form-container select,
+.form-container textarea,
+.form-container input[type="file"] {
+    width: 100%;
+    padding: 12px;
+    font-size: 15px;
     border: 1px solid #cbd5e1;
     border-radius: 8px;
-    font-size: 15px;
     background-color: #f8fafc;
     transition: border 0.2s ease;
 }
 
-input:focus, select:focus, textarea:focus {
-    outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+.form-container textarea {
+    resize: vertical;
+    height: 120px;
 }
 
-/* BOTÓN */
-button {
-    margin-top: 20px;
+.form-container select:focus,
+.form-container textarea:focus,
+.form-container input[type="file"]:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+}
+
+/* === BOTÓN === */
+.form-container button {
+    margin-top: 25px;
+    width: 100%;
     padding: 14px;
     background-color: #3b82f6;
     color: white;
@@ -96,32 +94,21 @@ button {
     transition: background-color 0.3s ease, transform 0.2s ease;
 }
 
-button:hover {
+.form-container button:hover {
     background-color: #2563eb;
     transform: scale(1.02);
 }
 
-/* MENSAJE Y VOLVER */
-.mensaje {
-    margin-top: 20px;
-    padding: 10px;
-    background-color: #fee2e2;
-    color: #b91c1c;
-    border: 1px solid #fecaca;
-    border-radius: 8px;
-    text-align: center;
-    font-weight: bold;
-}
-
+/* === ENLACE VOLVER === */
 .volver {
-    margin-top: 15px;
     text-align: center;
+    margin-top: 20px;
 }
 
 .volver a {
     color: #3b82f6;
-    text-decoration: none;
     font-weight: bold;
+    text-decoration: none;
     transition: color 0.2s ease;
 }
 

@@ -1,0 +1,108 @@
+body {
+    margin: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(to bottom, #f0f9ff, #e0f7fa);
+}
+
+.banner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: linear-gradient(to right, #34d399, #3b82f6);
+    padding: 10px 30px;
+    color: white;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.logo {
+    height: 55px;
+}
+
+.titulo-banner {
+    font-size: 22px;
+    font-weight: 600;
+}
+
+main {
+    padding: 40px 20px;
+    display: flex;
+    justify-content: center;
+}
+
+.form-container {
+    background-color: white;
+    padding: 30px;
+    border-radius: 20px;
+    box-shadow: 0 6px 30px rgba(0, 0, 0, 0.08);
+    max-width: 600px;
+    width: 100%;
+}
+
+h2 {
+    text-align: center;
+    color: #0f172a;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #334155;
+}
+
+select,
+input[type="date"],
+textarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background-color: #f8fafc;
+    font-size: 15px;
+}
+
+button {
+    width: 100%;
+    padding: 14px;
+    background-color: #3b82f6;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+button:hover {
+    background-color: #2563eb;
+}
+
+.mensaje-exito {
+    background-color: #dcfce7;
+    color: #15803d;
+    border: 1px solid #bbf7d0;
+    padding: 10px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+    text-align: center;
+    font-weight: bold;
+}
+
+.volver {
+    text-align: center;
+    margin-top: 15px;
+}
+
+.volver a {
+    color: #3b82f6;
+    font-weight: bold;
+    text-decoration: none;
+}
+
+.volver a:hover {
+    text-decoration: underline;
+}
