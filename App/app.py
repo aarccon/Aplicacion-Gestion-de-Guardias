@@ -1,15 +1,14 @@
 import datetime
-from flask import Flask, render_template, request, redirect, url_for, flash, session
+import csv
 import pymysql
 import os
+from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from config import get_db_connection, SECRET_KEY
 from pymongo import MongoClient
 from config import MONGO_URI, MONGO_DB, MONGO_COLECCION
-from flask import jsonify
 from datetime import datetime, date
-import csv
 from io import TextIOWrapper
 from flask import current_app
 
