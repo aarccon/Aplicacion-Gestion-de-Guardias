@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Incidencias Reportadas</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/incidencias_reportadas.css') }}">
+</head>
+<body>
+    <div class="banner">
+        <img src="{{ url_for('static', filename='img/logo_Aplicacion.png') }}" class="logo" alt="Logo Izquierda">
+        <h1 class="titulo-banner">Incidencias Reportadas</h1>
+        <img src="{{ url_for('static', filename='img/logo_Instituto.png') }}" class="logo" alt="Logo Derecha">
+    </div>
+
+    <main>
+        <div class="tabla-container">
+            <form method="GET">
+                <div class="filtros">
+                    <label for="fecha_inicio">Desde:</label>
+                    <input type="date" name="fecha_inicio" id="fecha_inicio" value="{{ request.args.get('fecha_inicio', '') }}">
+                    <label for="fecha_fin">Hasta:</label>
+                    <input type="date" name="fecha_fin" id="fecha_fin" value="{{ request.args.get('fecha_fin', '') }}">
+                    <button type="submit">Filtrar</button>
+                </div>
+            </form>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Profesor</th>
+                        <th>Fecha</th>
+                        <th>Tramo Horario</th>
+                        <th>Aula/Zona</th>
+                        <th>Texto Incidencia</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for i in incidencias %}
+                        <tr>
+                            <td>{{ i.profesor }}</td>
+                            <td>{{ i.fecha }}</td>
+                            <td>{{ i.horario }}</td>
+                            <td>{{ i.aula }}</td>
+                            <td>{{ i.texto }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <div class="volver">
+                <a href="{{ url_for('home') }}">Volver al Menú Principal</a>
+            </div>
+        </div>
+    </main>
+</body>
+</html>

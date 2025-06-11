@@ -7,7 +7,7 @@
 </head>
 <body>
     <header class="banner">
-        <img src="{{ url_for('static', filename='img/logo_Aplicacion.png') }}" alt="Logo" class="logo">
+        <img src="{{ url_for('static', filename='img/logo_Aplicacion.png') }}" alt="Logo Aplicación" class="logo">
         <h1 class="titulo-banner">GestGuardias</h1>
         <img src="{{ url_for('static', filename='img/logo_Instituto.png') }}" alt="IES" class="logo">
     </header>
@@ -44,7 +44,9 @@
                 </div>
 
                 <button type="submit">Enviar</button>
-                <div class="volver"><a href="{{ url_for('home') }}">← Volver al Menú Principal</a></div>
+                <div class="volver">
+                <a href="{{ url_for('home') }}">Volver al Menú Principal</a>
+                </div>
             </form>
         </div>
     </main>

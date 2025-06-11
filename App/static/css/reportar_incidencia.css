@@ -12,6 +12,7 @@ body {
     background: linear-gradient(to right, #34d399, #3b82f6);
     padding: 10px 40px;
     border-bottom: 2px solid #e2e8f0;
+    position: relative;
 }
 
 .logo {
@@ -34,30 +35,55 @@ main {
     justify-content: center;
 }
 
-.tabla-container {
+.form-container {
     background: white;
     padding: 30px;
     border-radius: 20px;
     box-shadow: 0 6px 30px rgba(0, 0, 0, 0.08);
-    max-width: 1000px;
+    max-width: 700px;
     width: 100%;
 }
 
-table {
-    width: 100%;
-    border-collapse: collapse;
+.form-group {
+    margin-bottom: 20px;
 }
 
-th, td {
-    padding: 12px 15px;
-    border: 1px solid #e2e8f0;
-    text-align: center;
-}
-
-th {
-    background-color: #e0f2fe;
+label {
+    display: block;
+    margin-bottom: 8px;
     font-weight: bold;
-    color: #0f172a;
+}
+
+select, textarea {
+    width: 100%;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #cbd5e1;
+    background-color: #f8fafc;
+    font-size: 14px;
+    box-sizing: border-box;
+}
+
+textarea {
+    resize: vertical;
+}
+
+button {
+    width: 100%;
+    padding: 14px;
+    background-color: #3b82f6;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+button:hover {
+    background-color: #2563eb;
+    transform: scale(1.02);
 }
 
 .mensaje {
@@ -67,6 +93,7 @@ th {
     border: 1px solid #fecaca;
     border-radius: 8px;
     text-align: center;
+    margin-bottom: 20px;
 }
 
 .volver {
@@ -81,15 +108,5 @@ th {
 }
 
 .volver a:hover {
-    text-decoration: underline;
-}
-
-td a {
-    color: #3b82f6;
-    font-weight: bold;
-    text-decoration: none;
-}
-
-td a:hover {
     text-decoration: underline;
 }

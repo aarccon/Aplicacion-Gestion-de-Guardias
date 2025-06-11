@@ -1,6 +1,6 @@
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     margin: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background: linear-gradient(to bottom, #f0f9ff, #e0f7fa);
     color: #1e293b;
 }
@@ -12,6 +12,7 @@ body {
     background: linear-gradient(to right, #34d399, #3b82f6);
     padding: 10px 40px;
     border-bottom: 2px solid #e2e8f0;
+    position: relative;
 }
 
 .logo {
@@ -43,6 +44,36 @@ main {
     width: 100%;
 }
 
+.filtros {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.filtros label {
+    font-weight: bold;
+}
+
+.filtros input[type="date"],
+.filtros button {
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid #cbd5e1;
+}
+
+.filtros button {
+    background-color: #3b82f6;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.filtros button:hover {
+    background-color: #2563eb;
+}
+
 table {
     width: 100%;
     border-collapse: collapse;
@@ -60,13 +91,8 @@ th {
     color: #0f172a;
 }
 
-.mensaje {
-    padding: 15px;
-    background-color: #fef2f2;
-    color: #b91c1c;
-    border: 1px solid #fecaca;
-    border-radius: 8px;
-    text-align: center;
+tr:nth-child(even) {
+    background-color: #f8fafc;
 }
 
 .volver {
@@ -81,15 +107,5 @@ th {
 }
 
 .volver a:hover {
-    text-decoration: underline;
-}
-
-td a {
-    color: #3b82f6;
-    font-weight: bold;
-    text-decoration: none;
-}
-
-td a:hover {
     text-decoration: underline;
 }

@@ -1,6 +1,48 @@
-<h2>Reportar Incidencia</h2>
-<form method="POST">
-    ID Guardia: <input name="id_guardia"><br>
-    Descripción: <textarea name="texto"></textarea><br>
-    <button type="submit">Reportar</button>
-</form>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Reportar Incidencia</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/reportar_incidencia.css') }}">
+</head>
+<body>
+    <div class="banner">
+        <img src="{{ url_for('static', filename='img/logo_Aplicacion.png') }}" class="logo" alt="Logo Aplicación">
+        <h1 class="titulo-banner">Reportar Incidencia</h1>
+        <img src="{{ url_for('static', filename='img/logo_Instituto.png') }}" class="logo" alt="Logo Derecha">
+    </div>
+
+    <main>
+        <div class="form-container">
+            {% if mensaje %}
+                <div class="mensaje">{{ mensaje }}</div>
+            {% endif %}
+
+            <form method="POST">
+                <div class="form-group">
+                    <label for="id_guardia">Selecciona la guardia:</label>
+                    <select name="id_guardia" id="id_guardia" required>
+                        <option value="" disabled selected>-- Elige una guardia --</option>
+                        {% for g in guardias %}
+                            <option value="{{ g.id_guardia }}">
+                                {{ g.dia }} - {{ g.horario }} - {{ g.aula or 'Sin aula' }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="texto">Descripción de la incidencia:</label>
+                    <textarea name="texto" id="texto" rows="5" placeholder="Describe la incidencia ocurrida..." required></textarea>
+                </div>
+
+                <button type="submit">Reportar Incidencia</button>
+            </form>
+
+            <div class="volver">
+                <a href="{{ url_for('home') }}" class="btn-volver">Volver al Menú Principal</a>
+            </div>
+        </div>
+    </main>
+</body>
+</html>

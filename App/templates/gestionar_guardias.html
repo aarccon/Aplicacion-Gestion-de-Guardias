@@ -8,7 +8,7 @@
 </head>
 <body>
     <div class="banner">
-        <img src="{{ url_for('static', filename='img/logo_Aplicacion.png') }}" class="logo" alt="Logo Izquierda">
+        <img src="{{ url_for('static', filename='img/logo_Aplicacion.png') }}" class="logo" alt="Logo Aplicación">
         <h1 class="titulo-banner">Gestión de Guardias del Día</h1>
         <img src="{{ url_for('static', filename='img/logo_Instituto.png') }}" class="logo" alt="Logo Derecha">
     </div>
@@ -60,8 +60,12 @@
                 </table>
 
                 <button type="submit">Guardar Asignaciones</button>
+                <div class="volver">
+                    <a href="{{ url_for('home') }}" class="btn-volver">Volver al Menú Principal</a>
+                </div>
             </form>
         </div>
+        
     </main>
 </body>
 </html>

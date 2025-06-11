@@ -105,7 +105,7 @@ CREATE TABLE Ausencias (
     id_tramo_ausencias INT NOT NULL,
     motivo TEXT,
     reincorporado_profesor BOOLEAN DEFAULT FALSE,
-    validacción_direccion BOOLEAN DEFAULT FALSE,
+    validacion_direccion BOOLEAN DEFAULT FALSE,
     FOREIGN KEY (dni_profesor_ausencias) REFERENCES Profesores(dni) ON DELETE CASCADE,
     FOREIGN KEY (id_tramo_ausencias) REFERENCES Tramos_Horarios(id_tramo),
     UNIQUE (dni_profesor_ausencias, fecha, id_tramo_ausencias)
@@ -126,6 +126,7 @@ CREATE TABLE Tareas (
     id_ausencia_tareas INT NOT NULL,
     id_grupo_tareas INT NOT NULL,
     texto TEXT NOT NULL,
+    archivo VARCHAR(255) DEFAULT NULL,
     FOREIGN KEY (id_ausencia_tareas) REFERENCES Ausencias(id_ausencia) ON DELETE CASCADE,
     FOREIGN KEY (id_grupo_tareas) REFERENCES Grupos(id_grupo),
     UNIQUE (id_ausencia_tareas, id_grupo_tareas)
@@ -142,5 +143,5 @@ CREATE TABLE Actividades_Extraescolares (
     FOREIGN KEY (id_grupo_actividades_extraescolares) REFERENCES Grupos(id_grupo),
     FOREIGN KEY (id_tramo_actividades_extraescolares) REFERENCES Tramos_Horarios(id_tramo),
     FOREIGN KEY (dni_profesor_actividades_extraescolares) REFERENCES Profesores(dni),
-    UNIQUE (id_grupo_actividades_extraescolares, fecha, id_tramo_actividades_extraescolares)
+    UNIQUE (id_grupo_actividades_extraescolares, fecha, id_tramo_actividades_extraescolares,dni_profesor_actividades_extraescolares)
 );

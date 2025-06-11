@@ -11,7 +11,7 @@ from flask import jsonify
 from datetime import datetime, date
 import csv
 from io import TextIOWrapper
-from flask_mail import Mail, Message
+from flask import current_app
 
 mongo_client = MongoClient(MONGO_URI)
 mongo_db = mongo_client[MONGO_DB]
@@ -214,6 +214,7 @@ def subir_profesores():
                             )
                             resultado = cursor.fetchone()
                             if resultado['cuenta'] == 0:
+                                password_encriptada = generate_password_hash(row['password'])
                                 cursor.execute("""
                                     INSERT INTO Profesores (dni, nombre, apellidos, email, password, puntos_guardia, id_perfil_profesores)
                                     VALUES (%s, %s, %s, %s, %s, %s, %s)
@@ -222,13 +223,13 @@ def subir_profesores():
                                     row['nombre'],
                                     row['apellidos'],
                                     row['email'],
-                                    row['password'],
+                                    password_encriptada,
                                     int(row.get('puntos_guardia', 0)),
                                     int(row['id_perfil_profesores'])
                                 ))
                                 insertados += 1
-                        connection.commit()
-                        mensaje = f"Se han insertado {insertados} profesores nuevos."
+                    connection.commit()
+                    mensaje = f"Se han insertado {insertados} profesores nuevos."
                 except Exception as ex:
                     mensaje = f"Error al procesar el archivo: {str(ex)}"
                 finally:
@@ -365,16 +366,13 @@ def gestionar_guardias():
     connection = get_db_connection()
     mensaje = ""
     
-    fecha_ficticia = date(2025, 6, 9)  # Lunes 9 junio 2025
-    dia_semana = fecha_ficticia.weekday() + 1
+    fecha_actual = date.today()
+    dia_semana = fecha_actual.weekday()
 
     with connection.cursor(pymysql.cursors.DictCursor) as cursor:
-        # Obtener TODOS los tramos con ausencia para ese día
+        # Obtener todos los tramos con ausencia para ese día
         cursor.execute("""
-            SELECT 
-                th.id_tramo, 
-                th.horario,
-                a.nombre AS aula_nombre,
+            SELECT th.id_tramo, th.horario, a.nombre AS aula_nombre,
                 (
                     SELECT GROUP_CONCAT(CONCAT(p.nombre, ' ', p.apellidos) SEPARATOR ', ')
                     FROM Guardias g
@@ -383,33 +381,43 @@ def gestionar_guardias():
                 ) AS profesores_asignados
             FROM Tramos_Horarios th
             JOIN Ausencias aus ON aus.id_tramo_ausencias = th.id_tramo AND aus.fecha = %s
-            LEFT JOIN Aulas a ON a.id_aula = aus.id_tramo_ausencias  -- Asumimos aula = id_tramo para simplificar
+            LEFT JOIN Aulas a ON a.id_aula = aus.id_tramo_ausencias
             GROUP BY th.id_tramo, th.horario, a.nombre
             ORDER BY th.id_tramo
-        """, (dia_semana, fecha_ficticia))
+        """, (dia_semana, fecha_actual))
         guardias_dia = cursor.fetchall()
 
-        # Profesores disponibles para cada tramo con asignatura "Guardia"
+        # Buscar profesores con Guardia y sin otra asignatura, y que no estén ausentes
         profesores_disponibles = {}
         for guardia in guardias_dia:
             cursor.execute("""
                 SELECT p.dni, p.nombre, p.apellidos
-                FROM Horarios h
-                JOIN Asignaturas a ON h.id_asignatura_horarios = a.id_asignatura
-                JOIN Profesores p ON h.dni_profesor_horarios = p.dni
-                WHERE h.id_dia_horarios = %s AND h.id_tramo_horarios = %s
-                  AND a.nombre LIKE 'Guardia%%'
-                  AND NOT EXISTS (
-                      SELECT 1 FROM Horarios h2
-                      WHERE h2.dni_profesor_horarios = p.dni
-                        AND h2.id_dia_horarios = %s
-                        AND h2.id_tramo_horarios = %s
-                        AND h2.id_asignatura_horarios != a.id_asignatura
-                  )
-            """, (dia_semana, guardia['id_tramo'], dia_semana, guardia['id_tramo']))
+                FROM Profesores p
+                WHERE EXISTS (
+                    SELECT 1 FROM Horarios h
+                    JOIN Asignaturas a ON h.id_asignatura_horarios = a.id_asignatura
+                    WHERE h.dni_profesor_horarios = p.dni
+                      AND h.id_dia_horarios = %s
+                      AND h.id_tramo_horarios = %s
+                      AND a.nombre LIKE 'Guardia%%'
+                )
+                AND NOT EXISTS (
+                    SELECT 1 FROM Horarios h
+                    JOIN Asignaturas a ON h.id_asignatura_horarios = a.id_asignatura
+                    WHERE h.dni_profesor_horarios = p.dni
+                      AND h.id_dia_horarios = %s
+                      AND h.id_tramo_horarios = %s
+                      AND a.nombre NOT LIKE 'Guardia%%'
+                )
+                AND NOT EXISTS (
+                    SELECT 1 FROM Ausencias aus
+                    WHERE aus.dni_profesor_ausencias = p.dni
+                      AND aus.fecha = %s
+                )
+            """, (dia_semana, guardia['id_tramo'], dia_semana, guardia['id_tramo'], fecha_actual))
             profesores_disponibles[guardia['id_tramo']] = cursor.fetchall()
 
-        # Procesar POST si se asignan guardias
+        # Procesar asignaciones
         if request.method == 'POST':
             for clave, valores in request.form.lists():
                 if clave.startswith("tramo_"):
@@ -431,40 +439,59 @@ def gestionar_guardias():
                            profesores_disponibles=profesores_disponibles,
                            mensaje=mensaje)
 
+
 @app.route('/guardias/asignadas')
 def guardias_asignadas():
     if 'usuario_dni' not in session:
         return redirect(url_for('login'))
 
     connection = get_db_connection()
-    #hoy = date.today()
-    hoy = date(2025, 6,9)
-    
+    hoy = date.today()
+
     with connection.cursor(pymysql.cursors.DictCursor) as cursor:
         cursor.execute("""
             SELECT 
                 th.horario,
-                IFNULL(a.nombre, 'No especificada') AS aula_nombre
+                IFNULL(a.nombre, 'No especificada') AS aula_nombre,
+                t.texto AS tarea,
+                t.archivo
             FROM Guardias g
             JOIN Tramos_Horarios th ON g.id_tramo_guardias = th.id_tramo
             LEFT JOIN Aulas a ON g.id_aula_guardias = a.id_aula
+            LEFT JOIN Ausencias au ON au.fecha = %s 
+                                AND au.id_tramo_ausencias = g.id_tramo_guardias
+            LEFT JOIN Tareas t ON t.id_ausencia_tareas = au.id_ausencia
             WHERE g.dni_profesor_guardias = %s
-              AND g.id_dia_guardias = WEEKDAY(%s) + 1
+            AND g.id_dia_guardias = WEEKDAY(%s) + 1
             ORDER BY th.id_tramo
-        """, (session['usuario_dni'], hoy))
-
+        """, (hoy, session['usuario_dni'], hoy))
         guardias = cursor.fetchall()
 
     connection.close()
     return render_template('guardias_asignadas.html', guardias=guardias)
 
-# Pendiente de ver sin hacer 
-@app.route('/incidencias/reportar', methods=['GET', 'POST'])
+# Reportacion de Incidencias
+@app.route('/incidencias/reportar', methods=['GET', 'POST']) 
 def reportar_incidencia():
     if 'usuario_dni' not in session:
         return redirect(url_for('login'))
 
     mensaje = ""
+    guardias_profesor = []
+
+    connection = get_db_connection()
+    with connection.cursor(pymysql.cursors.DictCursor) as cursor:
+        # Obtener las guardias asignadas al profesor
+        cursor.execute("""
+            SELECT g.id_guardia, d.nombre AS dia, t.horario, a.nombre AS aula
+            FROM Guardias g
+            JOIN Dias_Semana d ON g.id_dia_guardias = d.id_dia
+            JOIN Tramos_Horarios t ON g.id_tramo_guardias = t.id_tramo
+            LEFT JOIN Aulas a ON g.id_aula_guardias = a.id_aula
+            WHERE g.dni_profesor_guardias = %s
+        """, (session['usuario_dni'],))
+        guardias_profesor = cursor.fetchall()
+
     if request.method == 'POST':
         id_guardia = request.form['id_guardia']
         texto = request.form['texto']
@@ -472,7 +499,6 @@ def reportar_incidencia():
         if not all([id_guardia, texto]):
             mensaje = "Todos los campos son obligatorios."
         else:
-            connection = get_db_connection()
             with connection.cursor() as cursor:
                 try:
                     cursor.execute("""
@@ -483,9 +509,56 @@ def reportar_incidencia():
                     mensaje = "Incidencia reportada correctamente."
                 except Exception as e:
                     mensaje = f"Error al registrar la incidencia: {str(e)}"
-            connection.close()
 
-    return render_template('reportar_incidencia.html', mensaje=mensaje)
+    connection.close()
+    return render_template('reportar_incidencia.html', mensaje=mensaje, guardias=guardias_profesor)
+
+@app.route('/incidencias/reportadas', methods=['GET'])
+def incidencias_reportadas():
+    if 'usuario_dni' not in session:
+        return redirect(url_for('login'))
+
+    fecha_inicio = request.args.get('fecha_inicio')
+    fecha_fin = request.args.get('fecha_fin')
+
+    query = """
+        SELECT 
+            p.nombre AS profesor,
+            g.id_dia_guardias,
+            d.nombre AS dia,
+            g.id_tramo_guardias,
+            th.horario,
+            IFNULL(a.nombre, 'No especificada') AS aula,
+            i.texto,
+            i.timestamp AS fecha
+        FROM Incidencias i
+        JOIN Guardias g ON i.id_guardia_incidencias = g.id_guardia
+        JOIN Profesores p ON g.dni_profesor_guardias = p.dni
+        JOIN Dias_Semana d ON g.id_dia_guardias = d.id_dia
+        JOIN Tramos_Horarios th ON g.id_tramo_guardias = th.id_tramo
+        LEFT JOIN Aulas a ON g.id_aula_guardias = a.id_aula
+        WHERE 1=1
+    """
+
+    filtros = []
+    params = []
+
+    if fecha_inicio:
+        query += " AND DATE(i.timestamp) >= %s"
+        params.append(fecha_inicio)
+    if fecha_fin:
+        query += " AND DATE(i.timestamp) <= %s"
+        params.append(fecha_fin)
+
+    query += " ORDER BY i.timestamp DESC"
+
+    connection = get_db_connection()
+    with connection.cursor(pymysql.cursors.DictCursor) as cursor:
+        cursor.execute(query, tuple(params))
+        incidencias = cursor.fetchall()
+    connection.close()
+
+    return render_template('incidencias_reportadas.html', incidencias=incidencias)
 
 
 @app.route('/tareas/registrar', methods=['GET', 'POST'])
@@ -504,32 +577,43 @@ def registrar_tarea():
         archivo_nombre = None
         if archivo and archivo.filename:
             filename = secure_filename(archivo.filename)
-            ruta_archivos = os.path.join("static", "archivos_tareas")
-            os.makedirs(ruta_archivos, exist_ok=True)
-            archivo_path = os.path.join(ruta_archivos, filename)
-            archivo.save(archivo_path)
+            carpeta_destino = os.path.join(current_app.root_path, "static", "tareas")
+            os.makedirs(carpeta_destino, exist_ok=True)
+            ruta_archivo = os.path.join(carpeta_destino, filename)
+            archivo.save(ruta_archivo)
             archivo_nombre = filename
 
         if not all([id_ausencia, texto]):
-            mensaje = "Todos los campos son obligatorios."
+            mensaje = "Todos los campos obligatorios deben estar completos."
         else:
-            with connection.cursor() as cursor:
-                try:
-                    cursor.execute("""
-                        INSERT INTO Tareas (id_ausencia_tareas, id_grupo_tareas, texto, archivo)
-                        SELECT a.id_ausencia, h.id_grupo_horarios, %s, %s
-                        FROM Ausencias a
-                        JOIN Horarios h ON a.dni_profesor_ausencias = h.dni_profesor_horarios
-                                       AND a.id_tramo_ausencias = h.id_tramo_horarios
-                                       AND a.fecha = CURDATE()
-                        WHERE a.id_ausencia = %s
-                    """, (texto, archivo_nombre, id_ausencia))
-                    connection.commit()
-                    mensaje = "Tarea registrada correctamente."
-                except pymysql.err.IntegrityError:
-                    mensaje = "Ya existe una tarea para esa ausencia y grupo."
+            with connection.cursor(pymysql.cursors.DictCursor) as cursor:
+                # Obtener el grupo del horario correspondiente a la ausencia
+                cursor.execute("""
+                    SELECT h.id_grupo_horarios
+                    FROM Horarios h
+                    JOIN Ausencias a ON h.dni_profesor_horarios = a.dni_profesor_ausencias
+                                     AND h.id_tramo_horarios = a.id_tramo_ausencias
+                    WHERE a.id_ausencia = %s
+                    LIMIT 1
+                """, (id_ausencia,))
+                resultado = cursor.fetchone()
 
-    # Solo mostrar ausencias futuras
+                if resultado and resultado['id_grupo_horarios']:
+                    id_grupo = resultado['id_grupo_horarios']
+
+                    try:
+                        cursor.execute("""
+                            INSERT INTO Tareas (id_ausencia_tareas, id_grupo_tareas, texto, archivo)
+                            VALUES (%s, %s, %s, %s)
+                        """, (id_ausencia, id_grupo, texto, archivo_nombre))
+                        connection.commit()
+                        mensaje = "Tarea registrada correctamente."
+                    except pymysql.err.IntegrityError:
+                        mensaje = "Ya existe una tarea para esa ausencia y grupo."
+                else:
+                    mensaje = "No se pudo asociar la ausencia a un grupo. Verifica que el profesor tenga horario asignado ese día."
+
+    # Cargar ausencias futuras
     with connection.cursor(pymysql.cursors.DictCursor) as cursor:
         cursor.execute("""
             SELECT a.id_ausencia, a.fecha, t.horario
@@ -652,7 +736,7 @@ def validar_reincorporacion():
             JOIN Tramos_Horarios t ON a.id_tramo_ausencias = t.id_tramo
             WHERE a.fecha = %s
               AND a.reincorporado_profesor = TRUE
-              AND a.validacción_direccion = FALSE
+              AND a.validacion_direccion = FALSE
         """, (hoy,))
         ausencias = cursor.fetchall()
 
@@ -661,7 +745,7 @@ def validar_reincorporacion():
             for id_aus in ids_validadas:
                 cursor.execute("""
                     UPDATE Ausencias
-                    SET validacción_direccion = TRUE
+                    SET validacion_direccion = TRUE
                     WHERE id_ausencia = %s
                 """, (id_aus,))
             connection.commit()
@@ -751,7 +835,6 @@ def registrar_actividad_extraescolar():
                         VALUES (%s, %s, %s, %s)
                     """, (dni, fecha, tramo, "Acompaña actividad extraescolar"))
 
-
         connection.commit()
         mensaje = "Actividad registrada correctamente."
 
@@ -766,7 +849,6 @@ def registrar_actividad_extraescolar():
     connection.close()
     return render_template('registrar_actividad_extraescolar.html', grupos=grupos, tramos=tramos,
                            profesores=profesores, mensaje=mensaje)
-
 
 @app.route('/logout')
 def logout():
