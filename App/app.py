@@ -19,6 +19,7 @@ coleccion_mensajes = mongo_db[MONGO_COLECCION]
 db=mongo_client
 
 app = Flask(__name__)
+app.config['PREFERRED_URL_SCHEME'] = 'https'
 app.secret_key = SECRET_KEY
 
 # Función que se activa cuando se accede a la raíz del sitio web, esta función vale para redirigir a los usuarios que se encuentran logueados o no logueados cuando
@@ -367,7 +368,7 @@ def gestionar_guardias():
     mensaje = ""
     
     fecha_actual = date.today()
-    dia_semana = fecha_actual.weekday()
+    dia_semana = fecha_actual.weekday() + 1
 
     with connection.cursor(pymysql.cursors.DictCursor) as cursor:
         # Obtener todos los tramos con ausencia para ese día
@@ -683,17 +684,17 @@ def comunicar_reincorporacion():
 
     mensaje = ""
     connection = get_db_connection()
-    dni = session['usuario_dni']
     hoy = date.today()
 
     with connection.cursor(pymysql.cursors.DictCursor) as cursor:
         cursor.execute("""
-            SELECT a.id_ausencia, t.horario, a.fecha
+            SELECT a.id_ausencia, t.horario, a.fecha, p.nombre, p.apellidos
             FROM Ausencias a
             JOIN Tramos_Horarios t ON a.id_tramo_ausencias = t.id_tramo
-            WHERE a.dni_profesor_ausencias = %s AND a.fecha = %s
+            JOIN Profesores p ON a.dni_profesor_ausencias = p.dni
+            WHERE a.fecha = %s
               AND a.reincorporado_profesor = FALSE
-        """, (dni, hoy))
+        """, (hoy,))
         ausencias = cursor.fetchall()
 
         if request.method == 'POST':
