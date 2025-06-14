@@ -11,7 +11,7 @@ from config import MONGO_URI, MONGO_DB, MONGO_COLECCION
 from datetime import datetime, date
 from io import TextIOWrapper
 from flask import current_app
-from bson.objectid import ObjectId
+from bson.objectid import ObjectIdi
 
 mongo_client = MongoClient(MONGO_URI)
 mongo_db = mongo_client[MONGO_DB]
@@ -36,21 +36,27 @@ def root():
     # Si el usuario no se encuentra logueado, lo lleva a la página de logueo que es /login
     return redirect(url_for('login'))
 
+# Función para gestionar el inicio de sesión
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    # Cuando se encuentra el formulario mediante la opción POST obtenemos el dni y la contraseña del usuario (profesor)
     if request.method == 'POST':
         dni = request.form['dni']
         password = request.form['password']
+        # Establecemos la conexión con la base de datos
         connection = get_db_connection()
         with connection.cursor() as cursor:
+            # Realizamos una consulta en la cual comprobamos si el dni existe en la base de datos y obtenemos el nombre, la contraseña y el perfil del usuario.
             cursor.execute("SELECT nombre, password, id_perfil_profesores FROM Profesores WHERE dni = %s", (dni,))
             user = cursor.fetchone()
+        # Cerramos la conexión con la base de datos
         connection.close()
 
         if user and check_password_hash(user['password'], password):
             session['usuario_dni'] = dni
             session['username'] = user['nombre']
             return redirect(url_for('home'))
+        # En caso de que el dni o la contraseña sean incorrectos, se muestra el siguiente mensaje de error
         return render_template('login.html', mensaje="DNI o contraseña incorrectos.")
 
     return render_template('login.html')
@@ -371,6 +377,7 @@ def subir_horarios():
 
 # Gestión de Puntuaciones #
 
+# Función para gestionar las puntuaciones de los profesores
 @app.route('/puntuaciones', methods=['GET', 'POST'])
 def gestionar_puntuaciones():
 
@@ -810,9 +817,11 @@ def comunicar_reincorporacion():
     mensaje = ""
     # Establecemos la conexión con la base de datos
     connection = get_db_connection()
+    # La variable hoy almacena la fecha actual
     hoy = date.today()
 
     with connection.cursor(pymysql.cursors.DictCursor) as cursor:
+        # Consulta en la cual obtenemos todas las ausencias del día de hoy en la cual no se ha comunicado que el profesor@ se ha reincorporado
         cursor.execute("""
             SELECT ausencias.id_ausencia, tramos_horarios.horario, ausencias.fecha, profesores.nombre, profesores.apellidos
             FROM Ausencias ausencias
@@ -820,51 +829,61 @@ def comunicar_reincorporacion():
             JOIN Profesores profesores ON ausencias.dni_profesor_ausencias = profesores.dni
             WHERE ausencias.fecha = %s AND ausencias.reincorporado_profesor = FALSE
         """, (hoy,))
+        # Guardamos el resultado de la consulta en la variable ausencias
         ausencias = cursor.fetchall()
 
         if request.method == 'POST':
+            # Obtenemos los ids de las ausencias que se han reincorporado
             ids_reincorporados = request.form.getlist('reincorporados')
             for id_aus in ids_reincorporados:
+                # Actualizamos en la tabla Ausencias e indicamos que el profesor se ha reincorporado.
                 cursor.execute("""
-                    UPDATE Ausencias
-                    SET reincorporado_profesor = TRUE
-                    WHERE id_ausencia = %s
+                    UPDATE Ausencias SET reincorporado_profesor = TRUE WHERE id_ausencia = %s
                 """, (id_aus,))
+            # Guardamos los cambios que hemos realizado en la base de datos
             connection.commit()
+            # En caso de que se comunique una reincorporación guardamos en la variable mensaje el siguiente mensaje que se mostrará en texto
             mensaje = "Reincorporación enviada para validación de dirección."
-
+    # Cerramos la conexión con la base de datos
     connection.close()
     return render_template('comunicar_reincorporacion.html', ausencias=ausencias, mensaje=mensaje)
 
+# Función en la cual el equipo directivo del instituto validara la reincorporación
 @app.route('/ausencias/validar_reincorporacion', methods=['GET', 'POST'])
 def validar_reincorporacion():
     # En caso de que no haya una sesión iniciada, lo redirige al login para que el usuario se logue   
     if 'usuario_dni' not in session:
         return redirect(url_for('login'))
-
+    # Establecemos la conexión con la base de datos
     connection = get_db_connection()
     # La variable mensaje almacena el mensaje que muestra en pantalla
     mensaje = ""
+    # La variable hoy almacena la fecha actual
     hoy = date.today()
 
     with connection.cursor() as cursor:
+        # Esta primera consulta obtiene el perfil del usuario (profesor) que se ha logeado.
         cursor.execute("SELECT id_perfil_profesores FROM Profesores WHERE dni = %s", (session['usuario_dni'],))
+        # El resultado de la consulta la guardamos en la variable perfil
         perfil = cursor.fetchone()
 
-        if perfil['id_perfil_profesores'] != 2:  # Solo dirección
+        # Si el id del perfil de los profesores es distinto a 0, es decir no es 2.
+        if perfil['id_perfil_profesores'] != 2:
+            # Cerramos la conexión con la base de datos
             connection.close()
+            # Redirecionamos al usuario (profesor) a la página principal
             return redirect(url_for('home'))
     
 
     with connection.cursor(pymysql.cursors.DictCursor) as cursor:
         cursor.execute("""
-            SELECT a.id_ausencia, p.nombre, p.apellidos, t.horario, a.fecha
-            FROM Ausencias a
-            JOIN Profesores p ON a.dni_profesor_ausencias = p.dni
-            JOIN Tramos_Horarios t ON a.id_tramo_ausencias = t.id_tramo
-            WHERE a.fecha = %s
-              AND a.reincorporado_profesor = TRUE
-              AND a.validacion_direccion = FALSE
+            SELECT Ausencias.id_ausencia, Profesores.nombre, Profesores.apellidos, Tramos_Horarios.horario, Ausencias.fecha
+            FROM Ausencias
+            JOIN Profesores ON Ausencias.dni_profesor_ausencias = Profesores.dni
+            JOIN Tramos_Horarios ON Ausencias.id_tramo_ausencias = Tramos_Horarios.id_tramo
+            WHERE Ausencias.fecha = %s
+              AND Ausencias.reincorporado_profesor = TRUE
+              AND Ausencias.validacion_direccion = FALSE
         """, (hoy,))
         ausencias = cursor.fetchall()
 
@@ -872,13 +891,12 @@ def validar_reincorporacion():
             ids_validadas = request.form.getlist('validadas')
             for id_aus in ids_validadas:
                 cursor.execute("""
-                    UPDATE Ausencias
-                    SET validacion_direccion = TRUE
-                    WHERE id_ausencia = %s
+                    UPDATE Ausencias SET validacion_direccion = TRUE WHERE id_ausencia = %s
                 """, (id_aus,))
             connection.commit()
             mensaje = "Reincorporaciones validadas correctamente."
-
+    # Cerramos la conexión con la base de datos
+    
     connection.close()
     return render_template('validar_reincorporacion.html', ausencias=ausencias, mensaje=mensaje)
 
