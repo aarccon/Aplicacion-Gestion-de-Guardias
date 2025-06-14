@@ -13,7 +13,7 @@ La aplicación ha sido diseñada para funcionar tanto en entorno local como en p
 
 ---
 
-### ✅ 9.1 Instalación en local
+### ✅ 1. Instalación en local
 
 #### Requisitos previos:
 - Python 3.10 o superior  
@@ -49,7 +49,7 @@ Accede desde: [http://127.0.0.1:5000](http://127.0.0.1:5000)
 
 ---
 
-### 🔧 9.2 Despliegue con Waitress (entorno de producción)
+### 🔧 2. Despliegue con Waitress (entorno de producción)
 
 1. Añadir al final de `app.py`:
 ```python
@@ -68,7 +68,7 @@ python app.py
 
 ---
 
-### 🌐 9.3 Cloudflare Tunnel (acceso remoto)
+### 🌐 3. Cloudflare Tunnel (acceso remoto)
 
 1. Instalar desde la [guía oficial](https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation)
 
@@ -82,7 +82,7 @@ cloudflared tunnel --url http://localhost:8080
 
 ---
 
-### ⚙️ 9.4 Configuraciones necesarias
+### ⚙️ 4. Configuraciones necesarias
 
 #### `.env`:
 ```env

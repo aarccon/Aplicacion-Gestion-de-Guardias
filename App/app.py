@@ -11,6 +11,7 @@ from config import MONGO_URI, MONGO_DB, MONGO_COLECCION
 from datetime import datetime, date
 from io import TextIOWrapper
 from flask import current_app
+from bson.objectid import ObjectId
 
 mongo_client = MongoClient(MONGO_URI)
 mongo_db = mongo_client[MONGO_DB]
@@ -75,7 +76,7 @@ def home():
             return render_template('home.html', username=session.get('username'))
     return redirect(url_for('login'))
 
-#HORARIOS#
+# HORARIOS #
 
 # Función que muestra el horario del profesor que se encuentra actualmente logueado.
 @app.route('/horario')
@@ -123,98 +124,134 @@ def ver_horario():
 
     return render_template("ver_horario.html", dias=dias, tramos=tramos, horario=horario)
 
+# Función que nos permite ver el horario de cualquier profesor que hay en el instituto
 @app.route('/horario/otros', methods=['GET', 'POST'])
 def ver_horario_profesores():
+
+    # En caso de que no haya una sesión iniciada, lo redirige al login para que el usuario se logue
     if 'usuario_dni' not in session:
         return redirect(url_for('login'))
 
+    # Se realiza una conexión a la base de datos
     connection = get_db_connection()
+
+    # Se inicializan las variables: horario que es una lista vacia en la cual almacenara los horarios de los profesores y profesor_seleccionado: almacena el profesor que indiquemos en el formulario 
     horario = []
     profesor_seleccionado = None
 
     with connection.cursor(pymysql.cursors.DictCursor) as cursor:
+        # Realizamos la primera consulta la cual obtendrá el dni, los nombres y apellidos de todoso los profesores que hay en la base de datos y esto lo almacenanos en la variable profesores.
         cursor.execute("SELECT dni, CONCAT(nombre, ' ', apellidos) AS nombre_completo FROM Profesores")
         profesores = cursor.fetchall()
 
+        # En el caso que solicitemos datos guardamos en la variable profesor_seleccionado el dni del profesor que hemos seleccionado en el formulario.
         if request.method == 'POST':
             profesor_seleccionado = request.form['dni_profesor']
+            # Realizamos la segunda consulta la cual obtendrá el horario completo de ese profesor
             cursor.execute("""
-                SELECT ds.nombre AS dia, th.horario, g.nombre AS grupo, a.nombre AS asignatura, au.nombre AS aula
-                FROM Horarios h
-                JOIN Dias_Semana ds ON h.id_dia_horarios = ds.id_dia
-                JOIN Tramos_Horarios th ON h.id_tramo_horarios = th.id_tramo
-                LEFT JOIN Grupos g ON h.id_grupo_horarios = g.id_grupo
-                JOIN Asignaturas a ON h.id_asignatura_horarios = a.id_asignatura
-                LEFT JOIN Aulas au ON h.id_aula = au.id_aula
-                WHERE h.dni_profesor_horarios = %s
-                ORDER BY ds.id_dia, th.id_tramo
+                SELECT dias_semana.nombre AS dia, tramos_horarios.horario, grupos.nombre AS grupo, asignaturas.nombre AS asignatura, aulas.nombre AS aula
+                FROM Horarios horarios
+                JOIN Dias_Semana dias_semana ON horarios.id_dia_horarios = dias_semana.id_dia
+                JOIN Tramos_Horarios tramos_horarios ON horarios.id_tramo_horarios = tramos_horarios.id_tramo
+                LEFT JOIN Grupos grupos ON horarios.id_grupo_horarios = grupos.id_grupo
+                JOIN Asignaturas asignaturas ON horarios.id_asignatura_horarios = asignatura.id_asignatura
+                LEFT JOIN Aulas aulas ON horarios.id_aula = aulas.id_aula
+                WHERE horarios.dni_profesor_horarios = %s
+                ORDER BY dias_semana.id_dia, tramos_horarios.id_tramo
             """, (profesor_seleccionado,))
             horario = cursor.fetchall()
 
+    # Cerramos la conexión de la base de datos
     connection.close()
     return render_template("ver_horario_profesores.html", profesores=profesores, horario=horario, profesor_dni=profesor_seleccionado)
 
 #INSERCCIÓN DE DATOS #
 
+# Función que permite insertar un usuario en la aplicación.
 @app.route('/profesores/registrar', methods=['GET', 'POST'])
 def registrar_profesor():
+    # En caso de que no haya una sesión iniciada, lo redirige al login para que el usuario se logue
     if 'usuario_dni' not in session:
         return redirect(url_for('login'))
 
+    # La variable mensaje guardará el mensaje de exito o error que se va a mostrar en la pantalla
     mensaje = ""
     if request.method == 'POST':
+        # Obtenemos los datos del formulario cuando se va a realizar el registro
         dni = request.form['dni']
         nombre = request.form['nombre']
         apellidos = request.form['apellidos']
         email = request.form['email']
         password = request.form['password']
-        id_perfil = int(request.form['perfil'])  # Desplegable actualizado
+        id_perfil = int(request.form['perfil'])
+
+        # Se realiza la encriptación de la contraseña usando hash seguro.
         password_hash = generate_password_hash(password)
 
+        # Se comprueba que todos los campos esten rellenados.
         if not all([dni, nombre, apellidos, email, password, id_perfil]):
+            # En caso de que no esten todos los campos completos mostramos el siguiente mensaje
             mensaje = "Todos los campos son obligatorios."
         else:
+            # Si están todos los campos realizamos una conexión a la base de datos.
             connection = get_db_connection()
             with connection.cursor() as cursor:
                 try:
+                    # Realizamos la insercción de los datos en la tabla Profesores
                     cursor.execute("""
                         INSERT INTO Profesores (dni, nombre, apellidos, email, password, id_perfil_profesores)
                         VALUES (%s, %s, %s, %s, %s, %s)
                     """, (dni, nombre, apellidos, email, password_hash, id_perfil))
+                    # Confirmamos los cambios que hemos realizado en la base de datos
                     connection.commit()
+                    # Cuando se haga la insercción correctamente mostrará este mensaje
                     mensaje = "Profesor registrado correctamente."
                 except pymysql.err.IntegrityError:
+                    # Cuando la insercción de fallo mostrará este mensaje
                     mensaje = "El profesor ya existe con ese DNI o correo."
+            # Se cierra la conexión a la base de datos
             connection.close()
 
     return render_template('registrar_profesor.html', mensaje=mensaje)
 
 # Subida de Archivos CSV
 
+# Función en la que se permite subir un archivo csv para poder registrar muchos profesores a la vez.
 @app.route('/subida_profesorado', methods=['GET', 'POST'])
 def subir_profesores():
+
+    # La variable mensaje guardará el mensaje de exito o error que se va a mostrar en la pantalla
     mensaje = ""
     if request.method == 'POST':
+        # Comprobamos que hemos subido un archivo.
         if 'archivo' not in request.files:
             mensaje = "No se ha subido ningún archivo."
         else:
             archivo = request.files['archivo']
+            # Comprobamos que el fichero tenga extensión .csv.
             if archivo.filename.endswith('.csv'):
+
+                # Se realiza una conexión a la base de datos
                 connection = get_db_connection()
                 try:
                     archivo_stream = TextIOWrapper(archivo, encoding='utf-8')
                     reader = csv.DictReader(archivo_stream)
                     
-                    insertados = 0
+                    insertados = 0 # Es un contador en el cual se irá incrementando conforme se vaya realizando las insercciones en la base de datos.
                     with connection.cursor(pymysql.cursors.DictCursor) as cursor:
                         for row in reader:
+
+                            # Se usa un cursor para leer las filas de forma más clara.
                             cursor.execute(
+                                # Comprobamos si hay un profesor con el mismo DNI o email que hay en esa línea.
                                 "SELECT COUNT(*) AS cuenta FROM Profesores WHERE dni = %s OR email = %s",
                                 (row['dni'], row['email'])
                             )
                             resultado = cursor.fetchone()
                             if resultado['cuenta'] == 0:
+                                # Se realiza la encriptación del nuevo profesor.
                                 password_encriptada = generate_password_hash(row['password'])
+                                # Insertamos al nuevo profesor en la base de datos
                                 cursor.execute("""
                                     INSERT INTO Profesores (dni, nombre, apellidos, email, password, puntos_guardia, id_perfil_profesores)
                                     VALUES (%s, %s, %s, %s, %s, %s, %s)
@@ -227,55 +264,72 @@ def subir_profesores():
                                     int(row.get('puntos_guardia', 0)),
                                     int(row['id_perfil_profesores'])
                                 ))
-                                insertados += 1
+                                insertados += 1 # Incrementamos el valor del contador.
+
+                    # Guardamos los cambios en la base de datos.    
                     connection.commit()
+
+                    # Devolvemos un mensaje indicando los profesores que se han insertado
                     mensaje = f"Se han insertado {insertados} profesores nuevos."
                 except Exception as ex:
+                    # Si hay algún tipo de error, mostramos el mensaje de error.
                     mensaje = f"Error al procesar el archivo: {str(ex)}"
                 finally:
+                    # Cerramos la conexión con la base de datos.
                     connection.close()
             else:
+                # En caso de que el archivo no sea csv indicamos un mensaje diciendo que el archivo debe ser csv
                 mensaje = "El archivo debe ser .csv"
 
     return render_template('subir_profesores.html', mensaje=mensaje)
 
-
+# Función en la que se permite subir un archivo csv para poder registrar todos los horarios de los profesores a la vez.
 @app.route('/subida_horarios', methods=['GET', 'POST'])
 def subir_horarios():
 
+    # La variable mensaje guardará el mensaje de exito o error que se va a mostrar en la pantalla
     mensaje = ""
     if request.method == 'POST':
+        # Comprobamos que se ha subido un archivo correctamente
         if 'archivo' not in request.files:
             mensaje = "No se ha subido ningún archivo."
         else:
             archivo = request.files['archivo']
+
+            # Comprobamos que el archivo tenga una extensión .csv
             if archivo.filename.endswith('.csv'):
+
+                # Se realiza una conexión a la base de datos
                 connection = get_db_connection()
                 try:
                     archivo_stream = TextIOWrapper(archivo, encoding='utf-8')
                     reader = csv.DictReader(archivo_stream)
 
-                    # Validar que se han detectado cabeceras
+                    # Comprobamos que el archivo que hemos subido contiene cabeceras validas.
                     if not reader.fieldnames:
                         mensaje = "El archivo CSV no contiene cabeceras válidas."
                         return render_template('subir_horarios.html', mensaje=mensaje)
-
+                    
+                    # Indicamos las columnas que vamos a esperar del fichero csv
                     columnas_esperadas = ['dni_profesor_horarios', 'id_dia_horarios', 'id_tramo_horarios', 'id_grupo_horarios', 'id_asignatura_horarios', 'id_aula']
                     print("Cabeceras detectadas:", reader.fieldnames)
 
+                    # Comprobamos que todas las columnas que se van a esperar en el fichero csv se encuentran presente
                     for col in columnas_esperadas:
                         if col not in reader.fieldnames:
                             mensaje = f"Falta la columna '{col}' en el archivo CSV."
                             return render_template('subir_horarios.html', mensaje=mensaje)
 
-                    insertados = 0
+                    insertados = 0 # Es un contador en el cual se irá incrementando conforme se vaya realizando las insercciones en la base de datos.
+
+                    # Recorremos cada fila del archivo csv que contiene los horarios
                     with connection.cursor(pymysql.cursors.DictCursor) as cursor:
                         for row in reader:
                             print("Fila leída:", row)
+
+                            # Realizamos una comprobación de que no haya un registro con el mismo profesor, día y tramo horario
                             cursor.execute("""
-                                SELECT COUNT(*) AS total
-                                FROM Horarios
-                                WHERE dni_profesor_horarios = %s AND id_dia_horarios = %s AND id_tramo_horarios = %s
+                                SELECT COUNT(*) AS total FROM Horarios WHERE dni_profesor_horarios = %s AND id_dia_horarios = %s AND id_tramo_horarios = %s
                             """, (
                                 row['dni_profesor_horarios'],
                                 int(row['id_dia_horarios']),
@@ -283,6 +337,7 @@ def subir_horarios():
                             ))
                             existe = cursor.fetchone()['total'] > 0
 
+                            # En caso de que no exista se realiza la insercción en la base de datos del registro.
                             if not existe:
                                 cursor.execute("""
                                     INSERT INTO Horarios (dni_profesor_horarios, id_dia_horarios, id_tramo_horarios, id_grupo_horarios, id_asignatura_horarios, id_aula)
@@ -295,47 +350,57 @@ def subir_horarios():
                                     int(row['id_asignatura_horarios']),
                                     int(row['id_aula']) if row['id_aula'] else None
                                 ))
-                                insertados += 1
+                                insertados += 1 # Cuando se realiza una insercción se aumenta el contador de los registros que hemos insertado.
 
+                        # Guardamos los cambios en la base de datos
                         connection.commit()
+
+                        # Mostramos un mensaje con los registros de horarios que se han insertado nuevos.
                         mensaje = f"Se han insertado {insertados} registros de horario nuevos."
                 except Exception as e:
+                    # En caso de que se produzca un error en el proceso de lectura e insercción mostrará el mensaje.
                     mensaje = f"Error al procesar el archivo: {str(e)}"
                 finally:
+                    # Cerramos la conexión con la base de datos
                     connection.close()
             else:
+                # En caso de que el archivo no sea csv mostramos un mensaje indicando que el archivo no tiene el formato .csv
                 mensaje = "El archivo debe ser .csv"
 
     return render_template('subir_horarios.html', mensaje=mensaje)
-
-# Visualización de Horario del Profesor y Filtración para Visualizar Horarios de Otros Profesores
 
 # Gestión de Puntuaciones #
 
 @app.route('/puntuaciones', methods=['GET', 'POST'])
 def gestionar_puntuaciones():
+
+    # En caso de que no haya una sesión iniciada, lo redirige al login para que el usuario se logue
     if 'usuario_dni' not in session:
         return redirect(url_for('login'))
 
+    # Realizamos la conexión con la base de datos.
     connection = get_db_connection()
-    mensaje = ""
+    # La variable mensaje guardará el mensaje de exito o error que se va a mostrar en la pantalla
+    mensaje = "" 
 
     if request.method == 'POST':
         with connection.cursor() as cursor:
+            # Si pulsamos el botón de Resablecer las puntuaciones, todas las puntuaciones se ponen a 0
             if 'resetear' in request.form:
                 cursor.execute("UPDATE Profesores SET puntos_guardia = 0")
                 mensaje = "Todas las puntuaciones se han restablecido."
 
+            # Si pulsamos el botón de Subir, subimos la puntuación de ese profesor un punto
             elif 'subir' in request.form:
                 dni = request.form['subir']
                 cursor.execute("UPDATE Profesores SET puntos_guardia = puntos_guardia + 1 WHERE dni = %s", (dni,))
                 mensaje = f"Puntos aumentados para el profesor {dni}."
 
+            # Si pulsamos el botón de Bajar, bajamos la puntuación de ese profesor un punto
             elif 'bajar' in request.form:
                 dni = request.form['bajar']
                 cursor.execute("""
-                    UPDATE Profesores
-                    SET puntos_guardia = CASE
+                    UPDATE Profesores SET puntos_guardia = CASE
                         WHEN puntos_guardia > 0 THEN puntos_guardia - 1
                         ELSE 0
                     END
@@ -343,53 +408,58 @@ def gestionar_puntuaciones():
                 """, (dni,))
                 mensaje = f"Puntos reducidos para el profesor {dni}."
 
+            # Confirmamos los cambios en la base de datos
             connection.commit()
 
     with connection.cursor(pymysql.cursors.DictCursor) as cursor:
+        # Consulta para mostrar la puntuación de los profesores ordenados por puntos.
         cursor.execute("""
-            SELECT dni, nombre, apellidos, puntos_guardia
-            FROM Profesores
-            ORDER BY puntos_guardia DESC
+            SELECT dni, nombre, apellidos, puntos_guardia FROM Profesores ORDER BY puntos_guardia DESC
         """)
         puntuaciones = cursor.fetchall()
 
+    # Cerramos la conexión con la base de datos
     connection.close()
     return render_template('gestionar_puntuaciones.html', puntuaciones=puntuaciones, mensaje=mensaje)
 
 # Gestionar Guardias #
 
+# Función para llevar a cabo la gestión de la guardia de los profesores
 @app.route('/guardias/gestionar', methods=['GET', 'POST'])
 def gestionar_guardias():
+    # En caso de que no haya una sesión iniciada, lo redirige al login para que el usuario se logue
     if 'usuario_dni' not in session:
         return redirect(url_for('login'))
 
+    # Establecemos la conexión con la base de datos
     connection = get_db_connection()
+    # La variable mensaje guardará el mensaje de exito o error que se va a mostrar en la pantalla
     mensaje = ""
     
+    # La variable fecha_actual almacenara la fecha y el día de la semana actual
     fecha_actual = date.today()
     dia_semana = fecha_actual.weekday() + 1
 
     with connection.cursor(pymysql.cursors.DictCursor) as cursor:
-        # Obtener todos los tramos con ausencia para ese día
+        # Primera consulta en el cual obtenemos todos los tramos horaris que contiene ausencias en el día de hoy
         cursor.execute("""
-            SELECT th.id_tramo, th.horario, a.nombre AS aula_nombre,
+            SELECT tramos_horarios.id_tramo, tramos_horarios.horario, aulas.nombre AS aula_nombre,
                 (
-                    SELECT GROUP_CONCAT(CONCAT(p.nombre, ' ', p.apellidos) SEPARATOR ', ')
-                    FROM Guardias g
-                    JOIN Profesores p ON g.dni_profesor_guardias = p.dni
-                    WHERE g.id_dia_guardias = %s AND g.id_tramo_guardias = th.id_tramo
+                    SELECT GROUP_CONCAT(CONCAT(profesores.nombre, ' ', profesores.apellidos) SEPARATOR ', ') FROM Guardias guardias
+                    JOIN Profesores profesores ON guardias.dni_profesor_guardias = profesores.dni
+                    WHERE guardias.id_dia_guardias = %s AND guardias.id_tramo_guardias = tramos_horarios.id_tramo
                 ) AS profesores_asignados
-            FROM Tramos_Horarios th
-            JOIN Ausencias aus ON aus.id_tramo_ausencias = th.id_tramo AND aus.fecha = %s
-            LEFT JOIN Aulas a ON a.id_aula = aus.id_tramo_ausencias
-            GROUP BY th.id_tramo, th.horario, a.nombre
-            ORDER BY th.id_tramo
+            FROM Tramos_Horarios tramos_horarios
+            JOIN Ausencias ausencia ON ausencia.id_tramo_ausencias = tramos_horarios.id_tramo AND ausencia.fecha = %s
+            LEFT JOIN Aulas aulas ON aulas.id_aula = ausencia.id_tramo_ausencias
+            GROUP BY tramos_horarios.id_tramo, tramos_horarios.horario, aulas.nombre ORDER BY tramos_horarios.id_tramo
         """, (dia_semana, fecha_actual))
         guardias_dia = cursor.fetchall()
 
-        # Buscar profesores con Guardia y sin otra asignatura, y que no estén ausentes
+        # Diccionario en el cual almacenamos los profesores que hay disponibles en los tramos.
         profesores_disponibles = {}
         for guardia in guardias_dia:
+            # Segunda consulta en la que busca a los profesores que se encuentran en Guardia y no están ausentes.
             cursor.execute("""
                 SELECT p.dni, p.nombre, p.apellidos
                 FROM Profesores p
@@ -417,164 +487,192 @@ def gestionar_guardias():
             """, (dia_semana, guardia['id_tramo'], dia_semana, guardia['id_tramo'], fecha_actual))
             profesores_disponibles[guardia['id_tramo']] = cursor.fetchall()
 
-        # Procesar asignaciones
+        # Proceso en el cual se realiza las asignaciones
         if request.method == 'POST':
             for clave, valores in request.form.lists():
+                # Identificamos los campos que empiezan por "tramo" para así obtener los tramos seleccionados
                 if clave.startswith("tramo_"):
                     tramo_id = int(clave.split("_")[1])
                     for dni_profesor in valores:
+                        # Insertamos la guardia en el caso de que no existiera antes.
                         cursor.execute("""
                             INSERT IGNORE INTO Guardias (dni_profesor_guardias, id_dia_guardias, id_tramo_guardias)
                             VALUES (%s, %s, %s)
                         """, (dni_profesor, dia_semana, tramo_id))
+                        # Actualizamos los puntos cuando se asigne una guardia incrmentandolo de uno en uno
                         cursor.execute("""
                             UPDATE Profesores SET puntos_guardia = puntos_guardia + 1 WHERE dni = %s
                         """, (dni_profesor,))
+            # Guardamos los cambios realizados en la base de datos            
             connection.commit()
             mensaje = "Guardias asignadas correctamente."
-
+    # Cerramos la conexión con la base de datos
     connection.close()
-    return render_template('gestionar_guardias.html',
-                           guardias_dia=guardias_dia,
-                           profesores_disponibles=profesores_disponibles,
-                           mensaje=mensaje)
+    return render_template('gestionar_guardias.html', guardias_dia=guardias_dia, profesores_disponibles=profesores_disponibles, mensaje=mensaje)
 
-
+# Función que muestra las guardias que se le ha asignado al profesor donde ha iniciado sesión
 @app.route('/guardias/asignadas')
 def guardias_asignadas():
+    # En caso de que no haya una sesión iniciada, lo redirige al login para que el usuario se logue    
     if 'usuario_dni' not in session:
         return redirect(url_for('login'))
 
+    # Establecemos la conexión con la base de datos
     connection = get_db_connection()
+    # La variable hoy almacena la fecha actual.
     hoy = date.today()
 
     with connection.cursor(pymysql.cursors.DictCursor) as cursor:
+        # Realizamos esta primera consulta en la cual vamos a obtener las guardias que se le han asignado al profesor en el día de hoy
         cursor.execute("""
-            SELECT 
-                th.horario,
-                IFNULL(a.nombre, 'No especificada') AS aula_nombre,
-                t.texto AS tarea,
-                t.archivo
-            FROM Guardias g
-            JOIN Tramos_Horarios th ON g.id_tramo_guardias = th.id_tramo
-            LEFT JOIN Aulas a ON g.id_aula_guardias = a.id_aula
-            LEFT JOIN Ausencias au ON au.fecha = %s 
-                                AND au.id_tramo_ausencias = g.id_tramo_guardias
-            LEFT JOIN Tareas t ON t.id_ausencia_tareas = au.id_ausencia
-            WHERE g.dni_profesor_guardias = %s
-            AND g.id_dia_guardias = WEEKDAY(%s) + 1
-            ORDER BY th.id_tramo
+            SELECT tramo_horarios.horario,
+                   COALESCE(aulas.nombre, 'No especificada') AS aula_nombre,
+                   tareas.texto AS tarea,
+                   tareas.archivo
+            FROM Guardias guardias
+            JOIN Tramos_Horarios tramo_horarios ON guardias.id_tramo_guardias = tramo_horarios.id_tramo
+            LEFT JOIN Aulas aulas ON guardias.id_aula_guardias = aulas.id_aula
+            LEFT JOIN Ausencias ausencias ON ausencias.fecha = %s
+                                  AND ausencias.id_tramo_ausencias = guardias.id_tramo_guardias
+            LEFT JOIN Tareas tareas ON tareas.id_ausencia_tareas = ausencias.id_ausencia
+            WHERE guardias.dni_profesor_guardias = %s
+              AND guardias.id_dia_guardias = WEEKDAY(%s) + 1
+            ORDER BY tramo_horarios.id_tramo
         """, (hoy, session['usuario_dni'], hoy))
+        # La variable guardias contiene los resultados de la consulta en una lista de diccionarios
         guardias = cursor.fetchall()
 
+    # Finalizamos la conexión con la base de datos
     connection.close()
     return render_template('guardias_asignadas.html', guardias=guardias)
 
 # Reportacion de Incidencias
+
+# Función para que el profesor este en una guardia pueda reportar incidencias que ha sucedido
 @app.route('/incidencias/reportar', methods=['GET', 'POST']) 
 def reportar_incidencia():
+    
+    # En caso de que no haya una sesión iniciada, lo redirige al login para que el usuario se logue   
     if 'usuario_dni' not in session:
         return redirect(url_for('login'))
 
+    # La variable mensaje almacena el mensaje que muestra en pantalla
     mensaje = ""
+    # Listado en el cual se almacenara las guardias que se han asignado en el profesor logueado
     guardias_profesor = []
 
+    # Establecemos la conexión con la base de datos
     connection = get_db_connection()
     with connection.cursor(pymysql.cursors.DictCursor) as cursor:
-        # Obtener las guardias asignadas al profesor
+        # Esta primera consulta vamos a obtener las guardias que se le han asignado al profesor.
         cursor.execute("""
-            SELECT g.id_guardia, d.nombre AS dia, t.horario, a.nombre AS aula
-            FROM Guardias g
-            JOIN Dias_Semana d ON g.id_dia_guardias = d.id_dia
-            JOIN Tramos_Horarios t ON g.id_tramo_guardias = t.id_tramo
-            LEFT JOIN Aulas a ON g.id_aula_guardias = a.id_aula
-            WHERE g.dni_profesor_guardias = %s
+            SELECT guardias.id_guardia, dias_semanaulas.nombre AS dia, tramos_horarios.horario, aulas.nombre AS aula
+            FROM Guardias guardias
+            JOIN Dias_Semana dias_semana ON guardias.id_dia_guardias = dias_semanaulas.id_dia
+            JOIN Tramos_Horarios tramos_horarios ON guardias.id_tramo_guardias = tramos_horarios.id_tramo
+            LEFT JOIN Aulas aulas ON guardias.id_aula_guardias = aulas.id_aula
+            WHERE guardias.dni_profesor_guardias = %s
         """, (session['usuario_dni'],))
+        # Guardamos en la variable guardias_profesor el resultado de la consulta que hemos realizado anteriormente
         guardias_profesor = cursor.fetchall()
 
     if request.method == 'POST':
+        # Obtenemos el id de la guardia que se ha seleccionado y el texto que ha indicado en la incidencia y lo almacenamos en la variable id_guardia y texto.
         id_guardia = request.form['id_guardia']
         texto = request.form['texto']
 
+        # Comprobamos que todos los campos están rellenados
         if not all([id_guardia, texto]):
             mensaje = "Todos los campos son obligatorios."
         else:
             with connection.cursor() as cursor:
                 try:
+                    # Realizamos la insercción de la nueva incidencia que ha generado el profesor@ en la base de datos
                     cursor.execute("""
                         INSERT INTO Incidencias (id_guardia_incidencias, texto)
                         VALUES (%s, %s)
                     """, (id_guardia, texto))
+                    # Guardamos los cambios que hemos realizado
                     connection.commit()
                     mensaje = "Incidencia reportada correctamente."
                 except Exception as e:
+                    # En caso de dar algún error este nos mostrará porque no se ha podido registrar la incidencia.
                     mensaje = f"Error al registrar la incidencia: {str(e)}"
 
+    # Cerramos la conexión con la base de datos
     connection.close()
-    return render_template('reportar_incidencia.html', mensaje=mensaje, guardias=guardias_profesor)
+    return render_template('reportar_incidenciaulas.html', mensaje=mensaje, guardias=guardias_profesor)
 
+# Función para visualizar todas las incidencias que se han realizado
 @app.route('/incidencias/reportadas', methods=['GET'])
 def incidencias_reportadas():
+    # En caso de que no haya una sesión iniciada, lo redirige al login para que el usuario se logue   
     if 'usuario_dni' not in session:
         return redirect(url_for('login'))
 
+    # Obtenemos la fecha de inicio y fin en el cual se quieren realizar las busquedas de las incidencias
     fecha_inicio = request.args.get('fecha_inicio')
     fecha_fin = request.args.get('fecha_fin')
 
+    # Esta primera consulta que hacemos en esta función obtenemos las incidencias que se han registrado
     query = """
-        SELECT 
-            p.nombre AS profesor,
-            g.id_dia_guardias,
-            d.nombre AS dia,
-            g.id_tramo_guardias,
-            th.horario,
-            IFNULL(a.nombre, 'No especificada') AS aula,
-            i.texto,
-            i.timestamp AS fecha
-        FROM Incidencias i
-        JOIN Guardias g ON i.id_guardia_incidencias = g.id_guardia
-        JOIN Profesores p ON g.dni_profesor_guardias = p.dni
-        JOIN Dias_Semana d ON g.id_dia_guardias = d.id_dia
-        JOIN Tramos_Horarios th ON g.id_tramo_guardias = th.id_tramo
-        LEFT JOIN Aulas a ON g.id_aula_guardias = a.id_aula
+        SELECT profesores.nombre AS profesor, guardias.id_dia_guardias, dias_semana.nombre AS dia, guardias.id_tramo_guardias, tramos_horarios.horario, IFNULL(aulas.nombre, 'No especificada') AS aula, incidencias.texto, incidencias.timestamp AS fecha
+        FROM Incidencias incidencias
+        JOIN Guardias guardias ON incidencias.id_guardia_incidencias = guardias.id_guardia
+        JOIN Profesores profesores ON guardias.dni_profesor_guardias = profesores.dni
+        JOIN Dias_Semana dias_semana ON guardias.id_dia_guardias = dias_semana.id_dia
+        JOIN Tramos_Horarios tramos_horarios ON guardias.id_tramo_guardias = tramos_horarios.id_tramo
+        LEFT JOIN Aulas aulas ON guardias.id_aula_guardias = aulas.id_aula
         WHERE 1=1
     """
 
+    # Variables en la cual almacena las listas para almacenar los filtros que hay en el formulario y los parámetros de la consulta
     filtros = []
     params = []
 
+    # En caso de que se indique una fecha de inicio, esto se añade en la consulta
     if fecha_inicio:
-        query += " AND DATE(i.timestamp) >= %s"
+        query += " AND DATE(incidencias.timestamp) >= %s"
         params.append(fecha_inicio)
+    # En caso de que se indique una fecha de fin, esto se añade en la consulta
     if fecha_fin:
-        query += " AND DATE(i.timestamp) <= %s"
+        query += " AND DATE(incidencias.timestamp) <= %s"
         params.append(fecha_fin)
 
-    query += " ORDER BY i.timestamp DESC"
+    # Ordenamos todas las incidencias por fecha de maera descendente es decir de la más reciente a la más antigua
+    query += " ORDER BY incidencias.timestamp DESC"
 
+    # Establecemos la conexión con la base de datos
     connection = get_db_connection()
     with connection.cursor(pymysql.cursors.DictCursor) as cursor:
         cursor.execute(query, tuple(params))
+        # Obtenemos los resultados de la consulta que se ha realizado
         incidencias = cursor.fetchall()
+    # Cerramos con la conexión de la base de datos
     connection.close()
 
     return render_template('incidencias_reportadas.html', incidencias=incidencias)
 
-
+# Función en la que un profesor que este ausente pueda registrar una tarea para el alumnado
 @app.route('/tareas/registrar', methods=['GET', 'POST'])
 def registrar_tarea():
+    # En caso de que no haya una sesión iniciada, lo redirige al login para que el usuario se logue   
     if 'usuario_dni' not in session:
         return redirect(url_for('login'))
 
+    # Variable en la que almacenara el mensaje que se mostrará en pantalla
     mensaje = ""
+    # Establecemos la conexión con la base de datos.
     connection = get_db_connection()
 
     if request.method == 'POST':
+        # Recuperamos los datos que se han enviado en el formulario.
         id_ausencia = request.form['id_ausencia']
         texto = request.form['texto']
         archivo = request.files.get('archivo')
 
         archivo_nombre = None
+        # En caso de que se haya subido un archivo, lo almacenamos de manera segura
         if archivo and archivo.filename:
             filename = secure_filename(archivo.filename)
             carpeta_destino = os.path.join(current_app.root_path, "static", "tareas")
@@ -583,11 +681,12 @@ def registrar_tarea():
             archivo.save(ruta_archivo)
             archivo_nombre = filename
 
+        # Validamos que los campos del formulario obligatorios estén completos
         if not all([id_ausencia, texto]):
             mensaje = "Todos los campos obligatorios deben estar completos."
         else:
             with connection.cursor(pymysql.cursors.DictCursor) as cursor:
-                # Obtener el grupo del horario correspondiente a la ausencia
+                # Consulta en la cual vamos a obtener el grupo asociado al horario del profesor que se encuentra ausente
                 cursor.execute("""
                     SELECT h.id_grupo_horarios
                     FROM Horarios h
@@ -598,22 +697,28 @@ def registrar_tarea():
                 """, (id_ausencia,))
                 resultado = cursor.fetchone()
 
+                # Si encontramos el grupo, registramos las tareas
                 if resultado and resultado['id_grupo_horarios']:
                     id_grupo = resultado['id_grupo_horarios']
 
                     try:
+                        # Realizamos una insercción en la base de datos con la tarea que se ha creado
                         cursor.execute("""
                             INSERT INTO Tareas (id_ausencia_tareas, id_grupo_tareas, texto, archivo)
                             VALUES (%s, %s, %s, %s)
                         """, (id_ausencia, id_grupo, texto, archivo_nombre))
+                        # Guardamos los cambios realizado en la base de datos
                         connection.commit()
                         mensaje = "Tarea registrada correctamente."
                     except pymysql.err.IntegrityError:
+                        # En caso de que nos de un fallo nos mostrará el siguiente mensaje 
                         mensaje = "Ya existe una tarea para esa ausencia y grupo."
                 else:
-                    mensaje = "No se pudo asociar la ausencia a un grupo. Verifica que el profesor tenga horario asignado ese día."
+                    # Si no encontramos ningun grupo mostrará un mensaje en el cual indicara que no se puede asignar la tarea
+                    mensaje = "No se pudo asignar la tarea. Verifica que el profesor tenga horario asignado ese día."
 
-    # Cargar ausencias futuras
+    # Cargamos las ausencias que hay en un futuro
+     
     with connection.cursor(pymysql.cursors.DictCursor) as cursor:
         cursor.execute("""
             SELECT a.id_ausencia, a.fecha, t.horario
@@ -624,75 +729,96 @@ def registrar_tarea():
         """, (session['usuario_dni'],))
         ausencias = cursor.fetchall()
 
+    # Finalizamos la conexión con la base de datos
     connection.close()
     return render_template('registrar_tarea.html', mensaje=mensaje, ausencias=ausencias)
 
 # Gestión de Ausencias #
 
+# Función en la que un profesor en el caso de que se encuentre ausente puede registrar su ausencia
 @app.route('/ausencias/comunicar', methods=['GET', 'POST'])
 def comunicar_ausencia():
+    # En caso de que no haya una sesión iniciada, lo redirige al login para que el usuario se logue
     if 'usuario_dni' not in session:
         return redirect(url_for('login'))
 
+    # La variable mensaje como se ha indicado anteriormente se va a usar para que almacene el mensaje que se va a mostrar por pantalla.
     mensaje = ""
+    # Establecemos la conexión con la base de datos
     connection = get_db_connection()
 
     if request.method == 'POST':
         dni = session['usuario_dni']
+        # Obtenemos el dni del usuario que se encuentra actualmente logeado
         fecha = request.form['fecha']
         tramos = request.form.getlist('tramo')
         motivo = request.form['motivo']
 
+        # Comprobamos que los campos fecha y los tramos del formulario no se encuentre vacio, en caso de que uno de esos dos campos se encuentre vacio mostrará el siguiente mensaje de error.
         if not fecha or not tramos:
-            mensaje = "Todos los campos son obligatorios."
+            mensaje = "Los campos fecha y tramos son obligatorios"
         else:
             try:
+                # Obtenemos la fecha que se nos ha indicado en el formulario.
                 fecha_dt = datetime.strptime(fecha, '%Y-%m-%d').date()
+                # En el caso de que la fecha sea anterior al día de hoy es decir que sea una fecha pasada nos mostrará el mensaje que no se ha podido registrar la ausencia debido a que es una fecha pasada
                 if fecha_dt < date.today():
-                    mensaje = "No puedes registrar una ausencia en una fecha pasada."
+                    mensaje = "No puedes registrar la ausencia debido a que es una fecha pasada."
+                # En el caso de que la fecha sea hoy o la de un futuro entra en este apartado
                 else:
                     with connection.cursor() as cursor:
+                        # La variable errores es una lista en la cual se podrá almacenar posibles errores.
                         errores = []
                         for tramo in tramos:
                             try:
+                                # Insertamos en la tabla Ausencias cada tramo que hemos seleccionado
                                 cursor.execute("""
                                     INSERT INTO Ausencias (dni_profesor_ausencias, fecha, id_tramo_ausencias, motivo)
                                     VALUES (%s, %s, %s, %s)
                                 """, (dni, fecha, tramo, motivo))
                             except pymysql.err.IntegrityError:
+                                # En caso de que haya algún error en la insercción nos mostrará un mensaje en el cual nos indicara que hay ya una ausencia para ese tramo.
                                 errores.append(f"Ya existe una ausencia para el tramo {tramo} en esa fecha.")
+                        # Guardamos los cambios en la base de datos
                         connection.commit()
+                    # Si la lista de errores no se encuentra vacía mostrará todos los errores que ha almacenado
                     if errores:
                         mensaje = "Algunas ausencias no se registraron: " + "; ".join(errores)
                     else:
+                        # En caso de que no haya errores indica que las ausencias se han comunicado correctamente.
                         mensaje = "Ausencia(s) comunicada(s) correctamente."
+            # En caso de que la fecha que introduzca el profesor/dirección no sea valida mostrará un mensaje en el cual dira que la fecha no es valida
             except ValueError:
                 mensaje = "La fecha introducida no es válida."
 
     with connection.cursor(pymysql.cursors.DictCursor) as cursor:
         cursor.execute("SELECT id_tramo, horario FROM Tramos_Horarios")
         tramos = cursor.fetchall()
+    # Cerramos la conexión con la base de datos
     connection.close()
 
     return render_template('comunicar_ausencia.html', tramos=tramos, mensaje=mensaje)
 
+# Función en el cual se pueden comunicar la reincorporación de los profesores que se encuentran ausentes
 @app.route('/ausencias/reincorporacion', methods=['GET', 'POST'])
 def comunicar_reincorporacion():
+    # En caso de que no haya una sesión iniciada, lo redirige al login para que el usuario se logue   
     if 'usuario_dni' not in session:
         return redirect(url_for('login'))
 
+    # La variable mensaje almacena el mensaje que muestra en pantalla
     mensaje = ""
+    # Establecemos la conexión con la base de datos
     connection = get_db_connection()
     hoy = date.today()
 
     with connection.cursor(pymysql.cursors.DictCursor) as cursor:
         cursor.execute("""
-            SELECT a.id_ausencia, t.horario, a.fecha, p.nombre, p.apellidos
-            FROM Ausencias a
-            JOIN Tramos_Horarios t ON a.id_tramo_ausencias = t.id_tramo
-            JOIN Profesores p ON a.dni_profesor_ausencias = p.dni
-            WHERE a.fecha = %s
-              AND a.reincorporado_profesor = FALSE
+            SELECT ausencias.id_ausencia, tramos_horarios.horario, ausencias.fecha, profesores.nombre, profesores.apellidos
+            FROM Ausencias ausencias
+            JOIN Tramos_Horarios tramos_horarios ON ausencias.id_tramo_ausencias = tramos_horarios.id_tramo
+            JOIN Profesores profesores ON ausencias.dni_profesor_ausencias = profesores.dni
+            WHERE ausencias.fecha = %s AND ausencias.reincorporado_profesor = FALSE
         """, (hoy,))
         ausencias = cursor.fetchall()
 
@@ -712,10 +838,14 @@ def comunicar_reincorporacion():
 
 @app.route('/ausencias/validar_reincorporacion', methods=['GET', 'POST'])
 def validar_reincorporacion():
+    # En caso de que no haya una sesión iniciada, lo redirige al login para que el usuario se logue   
     if 'usuario_dni' not in session:
         return redirect(url_for('login'))
 
     connection = get_db_connection()
+    # La variable mensaje almacena el mensaje que muestra en pantalla
+    mensaje = ""
+    hoy = date.today()
 
     with connection.cursor() as cursor:
         cursor.execute("SELECT id_perfil_profesores FROM Profesores WHERE dni = %s", (session['usuario_dni'],))
@@ -724,9 +854,7 @@ def validar_reincorporacion():
         if perfil['id_perfil_profesores'] != 2:  # Solo dirección
             connection.close()
             return redirect(url_for('home'))
-
-    mensaje = ""
-    hoy = date.today()
+    
 
     with connection.cursor(pymysql.cursors.DictCursor) as cursor:
         cursor.execute("""
@@ -756,88 +884,141 @@ def validar_reincorporacion():
 
 # CHAT #
 
+# Función en la cual mostrará el chat
 @app.route('/chat')
 def chat():
+    # En caso de que no haya una sesión iniciada, lo redirige al login para que el usuario se logue   
     if 'usuario_dni' not in session:
         return redirect(url_for('login'))
+    # Obtenemos los mensajes
     mensajes = list(coleccion_mensajes.find({"archivado": False}).sort("timestamp", -1))
     return render_template('chat.html', mensajes=mensajes)
 
+# Función en la cual obtenemos los mensajes del chat en formato json
 @app.route('/chat/mensajes')
 def obtener_mensajes():
+    # Obtenemos todos los mensajes de la colección de mensajes que no se encuentran archivados, almacenandolo de más reciente a mas antiguo
     mensajes = list(coleccion_mensajes.find({"archivado": False}).sort("timestamp", -1))
+    # Bucle en el cual recorre todos los mensajes que se han obtenido
     for m in mensajes:
+        # Convierte el id del mensaje de MongoDB a una cadena de texto
         m["_id"] = str(m["_id"])
+        # Muestra el tiempo de cada mensaje
         m["timestamp"] = m["timestamp"].strftime("%d/%m/%Y %H:%M")
+    # Devuelve los mensajes que se han obtenido en formato JSON para así poder procesarlo en el fronted
     return jsonify(mensajes)
 
+# Función que permite enviar mensajes del chat
 @app.route('/chat/enviar', methods=['POST'])
 def enviar_mensaje():
+    # En caso de que no haya una sesión iniciada, lo redirige al login para que el usuario se logue   
     if 'usuario_dni' not in session:
         return redirect(url_for('login'))
-
+    # Obtiene el mensaje que se ha mandado en el chat
     mensaje = request.form['mensaje']
+    # Comprobamos que el mensaje que han enviado no se encuentre vacio
     if mensaje.strip():
         coleccion_mensajes.insert_one({
-            "autor": session['usuario_dni'],
-            "nombre": session['username'],
-            "mensaje": mensaje.strip(),
-            "timestamp": datetime.utcnow(),
-            "archivado": False
+            "autor": session['usuario_dni'], # Obtenemos el DNI del profesor que ha mandado el mensaje
+            "nombre": session['username'], # Obtenemos el nombre del profesor que ha mandado el mensaje
+            "mensaje": mensaje.strip(), # Obtenemos el mensaje
+            "timestamp": datetime.utcnow(), # Obtenemos la fecha y hora actual del mensaje.
+            "archivado": False # Indicamos el campo de archivado de la base de datos lo ponemos a False indicando que este mensaje no se encuentra archivado
         })
+    # Redirigimos al usuario al chat
     return redirect(url_for('chat'))
 
+# Función que permite archivar mensajes del chat
 @app.route('/chat/archivar/<id>')
 def archivar_mensaje(id):
-    if session.get('usuario_dni') != '00000000A':  # Control de admin
+    # Si el usuario no se encuentra logeado lo redireccióna a la pagina de logeo
+    if 'usuario_dni' not in session:
+        return redirect(url_for('login'))
+    # Realizamos conexión con la base de datos
+    connection = get_db_connection()
+    with connection.cursor(pymysql.cursors.DictCursor) as cursor:
+        # Esta primera consulta va a obtener el perfil del usuario para más adelante comprobar si puede archivar el mensaje del chat.
+        cursor.execute("SELECT id_perfil_profesores FROM Profesores WHERE dni = %s", (session['usuario_dni'],))
+        # La variable perfil obtiene el perfil del profesor y la almacena
+        perfil = cursor.fetchone()
+    # Cerramos la conexión con la base de datos
+    connection.close()
+    # Si la variable perfil es nula o es distinta de dos (perfil de dirección) lo redireccióna al chat
+    if not perfil or perfil['id_perfil_profesores'] != 2:
         return redirect(url_for('chat'))
-    from bson.objectid import ObjectId
+    # Archivamos el mensaje en el cual cambiamos el campo archivado a True
     coleccion_mensajes.update_one({'_id': ObjectId(id)}, {'$set': {'archivado': True}})
+    # Una vez que se archive el mensaje redigirimos al usuario al chat.
     return redirect(url_for('chat'))
 
+# Función que permite eliminar mensajes del chat
 @app.route('/chat/eliminar/<id>')
 def eliminar_mensaje(id):
-    if session.get('usuario_dni') != '00000000A':  # Control de admin
+    # Si el usuario no se encuentra logeado lo redireccióna a la pagina de logeo
+    if 'usuario_dni' not in session:
+        return redirect(url_for('login'))
+    # Realizamos conexión con la base de datos
+    connection = get_db_connection()
+    with connection.cursor(pymysql.cursors.DictCursor) as cursor:
+        # Esta primera consulta va a obtener el perfil del usuario para más adelante comprobar si puede eliminar el mensaje del chat.
+        cursor.execute("SELECT id_perfil_profesores FROM Profesores WHERE dni = %s", (session['usuario_dni'],))
+        # La variable perfil obtiene el perfil del profesor y la almacena
+        perfil = cursor.fetchone()
+    # Cerramos la conexión con la base de datos
+    connection.close()
+
+    # Si la variable perfil es nula o es distinta de dos (perfil de dirección) lo redireccióna al chat
+    if not perfil or perfil['id_perfil_profesores'] != 2:
         return redirect(url_for('chat'))
-    from bson.objectid import ObjectId
+
+    # Eliminamos el mensaje que contenga el ID que se ha proporcionado de la colección de mensajes que hay en la base de datos 
     coleccion_mensajes.delete_one({'_id': ObjectId(id)})
+    # Una vez que se elimine el mensaje redigirimos al usuario al chat.
     return redirect(url_for('chat'))
 
 # Actividades Extraescolares #
 
+# Función que permite registrar las actividades extraescolares
 @app.route('/actividades/registrar', methods=['GET', 'POST'])
 def registrar_actividad_extraescolar():
+    # En caso de que no haya una sesión iniciada, lo redirige al login para que el usuario se logue  
     if 'usuario_dni' not in session:
         return redirect(url_for('login'))
-
+    # Establecemos la conexión con la base de datos
     connection = get_db_connection()
+    # La variable mensaje almacena el mensaje que muestra en pantalla
     mensaje = ""
+    # La variable hoy obtiene la fecha actual
+    hoy = date.today()
 
+    # Si el metodo es POST; es decir cuando se envia el formulario
     if request.method == 'POST':
-        grupo = request.form['grupo']
-        fecha = request.form['fecha']
-        tramos = request.form.getlist('tramos')
-        afecta_completo = 'afecta_completo' in request.form
-        profesores = request.form.getlist('profesores')
+        grupo = request.form['grupo'] # Obtenemos el grupo que se ha seleccionado en el formulario
+        fecha = request.form['fecha'] # Obtenemos la fecha que se ha seleccionado en el formulario
+        tramos = request.form.getlist('tramos') # Obtenemos los tramos que se han seleccionado en el formulario
+        afecta_completo = 'afecta_completo' in request.form # Verificamos si la casilla en la cual indicamos si afecta completamente al aula se encuentra marcada
+        profesores = request.form.getlist('profesores') # Obtenemos los profesores que se han seleccionado en el formulario.
 
         with connection.cursor() as cursor:
+            # Por cada tramo que se ha seleccionado en el formulario, insertamos la actividad extraescolar en la base de datos
             for tramo in tramos:
                 cursor.execute("""
-                    INSERT INTO Actividades_Extraescolares (
-                        id_grupo_actividades_extraescolares, fecha, id_tramo_actividades_extraescolares,
-                        dni_profesor_actividades_extraescolares, afecta_grupo_completo
-                    ) VALUES (%s, %s, %s, %s, %s)
+                    INSERT INTO Actividades_Extraescolares ( id_grupo_actividades_extraescolares, fecha, id_tramo_actividades_extraescolares, dni_profesor_actividades_extraescolares, afecta_grupo_completo )
+                     VALUES (%s, %s, %s, %s, %s)
                 """, (grupo, fecha, tramo, session['usuario_dni'], afecta_completo))
 
+                # Por cada profesor que hemos indicado que va a estar en la actividad extraescolar insertamos en la tabla ausencia la ausencia de ese profesor
                 for dni in profesores:
                     cursor.execute("""
                         INSERT INTO Ausencias (dni_profesor_ausencias, fecha, id_tramo_ausencias, motivo)
                         VALUES (%s, %s, %s, %s)
                     """, (dni, fecha, tramo, "Acompaña actividad extraescolar"))
-
+        # Guardamos los cambios en la base de datos
         connection.commit()
+        # Almacenamos en la variable mensaje el mensaje que se mostrara en caso de que las insercciones funcione correctamente
         mensaje = "Actividad registrada correctamente."
 
+    # Mediante este cursor obtenemos los datos para poder rellenar el formulario
     with connection.cursor(pymysql.cursors.DictCursor) as cursor:
         cursor.execute("SELECT id_grupo, nombre FROM Grupos")
         grupos = cursor.fetchall()
@@ -846,14 +1027,19 @@ def registrar_actividad_extraescolar():
         cursor.execute("SELECT dni, nombre, apellidos FROM Profesores")
         profesores = cursor.fetchall()
 
+    # Cerramos la conexión con la base de datos
     connection.close()
-    return render_template('registrar_actividad_extraescolar.html', grupos=grupos, tramos=tramos,
-                           profesores=profesores, mensaje=mensaje)
+    return render_template('registrar_actividad_extraescolar.html', grupos=grupos, tramos=tramos, profesores=profesores, mensaje=mensaje)
 
+# Función en la cual cuando el usuario cierre sesión se ejecutara.
 @app.route('/logout')
 def logout():
+    # Limpiamos todos los datos de la sesión que ha estado abierta por el usuario, así cerrando su sesión de manera automatica
     session.clear()
+    # Redirecciona al usuario a la página inicial para que inicie sesión de nuevo
     return redirect(url_for('login'))
 
+# Comprobamos si este archivo se esta ejecutando de manera directa
 if __name__ == '__main__':
+    # Inicializamos la aplicación con Flask en modo debug, esto hace que muestra los errores de manera detallada
     app.run(debug=True)
