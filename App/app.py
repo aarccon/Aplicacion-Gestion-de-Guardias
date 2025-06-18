@@ -532,20 +532,16 @@ def guardias_asignadas():
     with connection.cursor(pymysql.cursors.DictCursor) as cursor:
         # Realizamos esta primera consulta en la cual vamos a obtener las guardias que se le han asignado al profesor en el día de hoy
         cursor.execute("""
-            SELECT 
-                Tramos_Horarios.horario,
-                COALESCE(Aulas.nombre, 'No especificada') AS aula_nombre,
-                Tareas.texto AS tarea,
-                Tareas.archivo,
-                Grupos.nombre AS grupo_nombre
+            SELECT Tramos_Horarios.horario,
+                   COALESCE(Aulas.nombre, 'No especificada') AS aula_nombre,
+                   Tareas.texto AS tarea,
+                   Tareas.archivo
             FROM Guardias
             JOIN Tramos_Horarios ON Guardias.id_tramo_guardias = Tramos_Horarios.id_tramo
             LEFT JOIN Aulas ON Guardias.id_aula_guardias = Aulas.id_aula
             LEFT JOIN Ausencias ON Ausencias.fecha = %s
-                                      AND Ausencias.id_tramo_ausencias = Guardias.id_tramo_guardias
+                                  AND Ausencias.id_tramo_ausencias = Guardias.id_tramo_guardias
             LEFT JOIN Tareas ON Tareas.id_ausencia_tareas = Ausencias.id_ausencia
-            LEFT JOIN Horarios ON Horarios.id_tramo_horarios = Guardias.id_tramo_guardias
-            LEFT JOIN Grupos ON Grupos.id_grupo = Horarios.id_grupo_horarios
             WHERE Guardias.dni_profesor_guardias = %s
               AND Guardias.id_dia_guardias = WEEKDAY(%s) + 1
             ORDER BY Tramos_Horarios.id_tramo
