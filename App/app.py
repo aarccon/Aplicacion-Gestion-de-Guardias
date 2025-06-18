@@ -100,12 +100,12 @@ def ver_horario():
 
         # Realizamos esta tercera consulta en la cual obtenemos el horario del profesor que hay actualmente logueado.
         cursor.execute("""
-            SELECT horarios.id_dia_horarios, horarios.id_tramo_horarios, asignaturas.nombre AS asignatura, grupo.nombre AS grupo, aula.nombre AS aula
-            FROM Horarios horarios
-            JOIN Asignaturas asignaturas ON horarios.id_asignatura_horarios = asignaturas.id_asignatura
-            LEFT JOIN Grupos grupo ON horarios.id_grupo_horarios = grupo.id_grupo
-            LEFT JOIN Aulas aula ON horarios.id_aula = aula.id_aula
-            WHERE horarios.dni_profesor_horarios = %s
+            SELECT Horarios.id_dia_horarios, Horarios.id_tramo_horarios, Asignaturas.nombre AS asignatura, Grupos.nombre AS grupo, Aulas.nombre AS aula
+            FROM Horarios
+            JOIN Asignaturas ON Horarios.id_asignatura_horarios = Asignaturas.id_asignatura
+            LEFT JOIN Grupos ON Horarios.id_grupo_horarios = Grupos.id_grupo
+            LEFT JOIN Aulas ON Horarios.id_aula = Aulas.id_aula
+            WHERE Horarios.dni_profesor_horarios = %s
         """, (session['usuario_dni'],))
         datos = cursor.fetchall()
 
@@ -141,7 +141,7 @@ def ver_horario_profesores():
 
     with connection.cursor(pymysql.cursors.DictCursor) as cursor:
         # Realizamos la primera consulta la cual obtendrá el dni, los nombres y apellidos de todoso los profesores que hay en la base de datos y esto lo almacenanos en la variable profesores.
-        cursor.execute("SELECT dni, CONCAT(nombre, ' ', apellidos) AS nombre_completo FROM Profesores")
+        cursor.execute("SELECT dni, CONCAT(nombre, ' ', apellidos) AS nombre_completo FROM Profesores  ORDER BY apellidos ASC")
         profesores = cursor.fetchall()
 
         # En el caso que solicitemos datos guardamos en la variable profesor_seleccionado el dni del profesor que hemos seleccionado en el formulario.
@@ -149,15 +149,15 @@ def ver_horario_profesores():
             profesor_seleccionado = request.form['dni_profesor']
             # Realizamos la segunda consulta la cual obtendrá el horario completo de ese profesor
             cursor.execute("""
-                SELECT dias_semana.nombre AS dia, tramos_horarios.horario, grupos.nombre AS grupo, asignaturas.nombre AS asignatura, aulas.nombre AS aula
-                FROM Horarios horarios
-                JOIN Dias_Semana dias_semana ON horarios.id_dia_horarios = dias_semana.id_dia
-                JOIN Tramos_Horarios tramos_horarios ON horarios.id_tramo_horarios = tramos_horarios.id_tramo
-                LEFT JOIN Grupos grupos ON horarios.id_grupo_horarios = grupos.id_grupo
-                JOIN Asignaturas asignaturas ON horarios.id_asignatura_horarios = asignatura.id_asignatura
-                LEFT JOIN Aulas aulas ON horarios.id_aula = aulas.id_aula
-                WHERE horarios.dni_profesor_horarios = %s
-                ORDER BY dias_semana.id_dia, tramos_horarios.id_tramo
+                SELECT Dias_Semana.nombre AS dia, Tramos_Horarios.horario, Grupos.nombre AS grupo, Asignaturas.nombre AS asignatura, Aulas.nombre AS aula
+                FROM Horarios
+                JOIN Dias_Semana ON Horarios.id_dia_horarios = Dias_Semana.id_dia
+                JOIN Tramos_Horarios ON Horarios.id_tramo_horarios = Tramos_Horarios.id_tramo
+                LEFT JOIN Grupos ON Horarios.id_grupo_horarios = Grupos.id_grupo
+                JOIN Asignaturas ON Horarios.id_asignatura_horarios = Asignaturas.id_asignatura
+                LEFT JOIN Aulas ON Horarios.id_aula = Aulas.id_aula
+                WHERE Horarios.dni_profesor_horarios = %s
+                ORDER BY Dias_Semana.id_dia, Tramos_Horarios.id_tramo
             """, (profesor_seleccionado,))
             horario = cursor.fetchall()
 
@@ -394,7 +394,10 @@ def gestionar_puntuaciones():
             elif 'subir' in request.form:
                 dni = request.form['subir']
                 cursor.execute("UPDATE Profesores SET puntos_guardia = puntos_guardia + 1 WHERE dni = %s", (dni,))
-                mensaje = f"Puntos aumentados para el profesor {dni}."
+                # Consulta que obtiene el nombre y apellidos del profesor
+                cursor.execute("SELECT nombre, apellidos FROM Profesores WHERE dni = %s", (dni,))
+                profesor = cursor.fetchone()
+                mensaje = f"Puntos aumentados para el profesor {profesor['nombre']} {profesor['apellidos']}."
 
             # Si pulsamos el botón de Bajar, bajamos la puntuación de ese profesor un punto
             elif 'bajar' in request.form:
@@ -406,7 +409,10 @@ def gestionar_puntuaciones():
                     END
                     WHERE dni = %s
                 """, (dni,))
-                mensaje = f"Puntos reducidos para el profesor {dni}."
+                # Consulta que obtiene el nombre y apellidos del profesor
+                cursor.execute("SELECT nombre, apellidos FROM Profesores WHERE dni = %s", (dni,))
+                profesor = cursor.fetchone()
+                mensaje = f"Puntos reducidos para el profesor {profesor['nombre']} {profesor['apellidos']}."
 
             # Confirmamos los cambios en la base de datos
             connection.commit()
@@ -414,7 +420,7 @@ def gestionar_puntuaciones():
     with connection.cursor(pymysql.cursors.DictCursor) as cursor:
         # Consulta para mostrar la puntuación de los profesores ordenados por puntos.
         cursor.execute("""
-            SELECT dni, nombre, apellidos, puntos_guardia FROM Profesores ORDER BY puntos_guardia DESC
+            SELECT dni, nombre, apellidos, puntos_guardia FROM Profesores ORDER BY apellidos ASC, puntos_guardia DESC
         """)
         puntuaciones = cursor.fetchall()
 
@@ -443,16 +449,16 @@ def gestionar_guardias():
     with connection.cursor(pymysql.cursors.DictCursor) as cursor:
         # Primera consulta en el cual obtenemos todos los tramos horaris que contiene ausencias en el día de hoy
         cursor.execute("""
-            SELECT tramos_horarios.id_tramo, tramos_horarios.horario, aulas.nombre AS aula_nombre,
+            SELECT Tramos_Horarios.id_tramo, Tramos_Horarios.horario, Aulas.nombre AS aula_nombre,
                 (
-                    SELECT GROUP_CONCAT(CONCAT(profesores.nombre, ' ', profesores.apellidos) SEPARATOR ', ') FROM Guardias guardias
-                    JOIN Profesores profesores ON guardias.dni_profesor_guardias = profesores.dni
-                    WHERE guardias.id_dia_guardias = %s AND guardias.id_tramo_guardias = tramos_horarios.id_tramo
+                    SELECT GROUP_CONCAT(CONCAT(Profesores.nombre, ' ', Profesores.apellidos) SEPARATOR ', ') FROM Guardias
+                    JOIN Profesores ON Guardias.dni_profesor_guardias = Profesores.dni
+                    WHERE Guardias.id_dia_guardias = %s AND Guardias.id_tramo_guardias = Tramos_Horarios.id_tramo
                 ) AS profesores_asignados
-            FROM Tramos_Horarios tramos_horarios
-            JOIN Ausencias ausencia ON ausencia.id_tramo_ausencias = tramos_horarios.id_tramo AND ausencia.fecha = %s
-            LEFT JOIN Aulas aulas ON aulas.id_aula = ausencia.id_tramo_ausencias
-            GROUP BY tramos_horarios.id_tramo, tramos_horarios.horario, aulas.nombre ORDER BY tramos_horarios.id_tramo
+            FROM Tramos_Horarios
+            JOIN Ausencias ON Ausencias.id_tramo_ausencias = Tramos_Horarios.id_tramo AND Ausencias.fecha = %s
+            LEFT JOIN Aulas ON Aulas.id_aula = Ausencias.id_tramo_ausencias
+            GROUP BY Tramos_Horarios.id_tramo, Tramos_Horarios.horario, Aulas.nombre ORDER BY Tramos_Horarios.id_tramo
         """, (dia_semana, fecha_actual))
         guardias_dia = cursor.fetchall()
 
@@ -461,28 +467,28 @@ def gestionar_guardias():
         for guardia in guardias_dia:
             # Segunda consulta en la que busca a los profesores que se encuentran en Guardia y no están ausentes.
             cursor.execute("""
-                SELECT p.dni, p.nombre, p.apellidos
-                FROM Profesores p
+                SELECT Profesores.dni, Profesores.nombre, Profesores.apellidos
+                FROM Profesores
                 WHERE EXISTS (
-                    SELECT 1 FROM Horarios h
-                    JOIN Asignaturas a ON h.id_asignatura_horarios = a.id_asignatura
-                    WHERE h.dni_profesor_horarios = p.dni
-                      AND h.id_dia_horarios = %s
-                      AND h.id_tramo_horarios = %s
-                      AND a.nombre LIKE 'Guardia%%'
+                    SELECT 1 FROM Horarios
+                    JOIN Asignaturas ON Horarios.id_asignatura_horarios = Asignaturas.id_asignatura
+                    WHERE Horarios.dni_profesor_horarios = Profesores.dni
+                      AND Horarios.id_dia_horarios = %s
+                      AND Horarios.id_tramo_horarios = %s
+                      AND Asignaturas.nombre LIKE 'Guardia%%'
                 )
                 AND NOT EXISTS (
-                    SELECT 1 FROM Horarios h
-                    JOIN Asignaturas a ON h.id_asignatura_horarios = a.id_asignatura
-                    WHERE h.dni_profesor_horarios = p.dni
-                      AND h.id_dia_horarios = %s
-                      AND h.id_tramo_horarios = %s
-                      AND a.nombre NOT LIKE 'Guardia%%'
+                    SELECT 1 FROM Horarios
+                    JOIN Asignaturas ON Horarios.id_asignatura_horarios = Asignaturas.id_asignatura
+                    WHERE Horarios.dni_profesor_horarios = Profesores.dni
+                      AND Horarios.id_dia_horarios = %s
+                      AND Horarios.id_tramo_horarios = %s
+                      AND Asignaturas.nombre NOT LIKE 'Guardia%%'
                 )
                 AND NOT EXISTS (
-                    SELECT 1 FROM Ausencias aus
-                    WHERE aus.dni_profesor_ausencias = p.dni
-                      AND aus.fecha = %s
+                    SELECT 1 FROM Ausencias
+                    WHERE Ausencias.dni_profesor_ausencias = Profesores.dni
+                      AND Ausencias.fecha = %s
                 )
             """, (dia_semana, guardia['id_tramo'], dia_semana, guardia['id_tramo'], fecha_actual))
             profesores_disponibles[guardia['id_tramo']] = cursor.fetchall()
@@ -508,7 +514,8 @@ def gestionar_guardias():
             mensaje = "Guardias asignadas correctamente."
     # Cerramos la conexión con la base de datos
     connection.close()
-    return render_template('gestionar_guardias.html', guardias_dia=guardias_dia, profesores_disponibles=profesores_disponibles, mensaje=mensaje)
+    return render_template('gestionar_Guardias.html', guardias_dia=guardias_dia, profesores_disponibles=profesores_disponibles, mensaje=mensaje)
+
 
 # Función que muestra las guardias que se le ha asignado al profesor donde ha iniciado sesión
 @app.route('/guardias/asignadas')
@@ -525,19 +532,19 @@ def guardias_asignadas():
     with connection.cursor(pymysql.cursors.DictCursor) as cursor:
         # Realizamos esta primera consulta en la cual vamos a obtener las guardias que se le han asignado al profesor en el día de hoy
         cursor.execute("""
-            SELECT tramo_horarios.horario,
-                   COALESCE(aulas.nombre, 'No especificada') AS aula_nombre,
-                   tareas.texto AS tarea,
-                   tareas.archivo
-            FROM Guardias guardias
-            JOIN Tramos_Horarios tramo_horarios ON guardias.id_tramo_guardias = tramo_horarios.id_tramo
-            LEFT JOIN Aulas aulas ON guardias.id_aula_guardias = aulas.id_aula
-            LEFT JOIN Ausencias ausencias ON ausencias.fecha = %s
-                                  AND ausencias.id_tramo_ausencias = guardias.id_tramo_guardias
-            LEFT JOIN Tareas tareas ON tareas.id_ausencia_tareas = ausencias.id_ausencia
-            WHERE guardias.dni_profesor_guardias = %s
-              AND guardias.id_dia_guardias = WEEKDAY(%s) + 1
-            ORDER BY tramo_horarios.id_tramo
+            SELECT Tramos_Horarios.horario,
+                   COALESCE(Aulas.nombre, 'No especificada') AS aula_nombre,
+                   Tareas.texto AS tarea,
+                   Tareas.archivo
+            FROM Guardias
+            JOIN Tramos_Horarios ON Guardias.id_tramo_guardias = Tramos_Horarios.id_tramo
+            LEFT JOIN Aulas ON Guardias.id_aula_guardias = Aulas.id_aula
+            LEFT JOIN Ausencias ON Ausencias.fecha = %s
+                                  AND Ausencias.id_tramo_ausencias = Guardias.id_tramo_guardias
+            LEFT JOIN Tareas ON Tareas.id_ausencia_tareas = Ausencias.id_ausencia
+            WHERE Guardias.dni_profesor_guardias = %s
+              AND Guardias.id_dia_guardias = WEEKDAY(%s) + 1
+            ORDER BY Tramos_Horarios.id_tramo
         """, (hoy, session['usuario_dni'], hoy))
         # La variable guardias contiene los resultados de la consulta en una lista de diccionarios
         guardias = cursor.fetchall()
@@ -566,12 +573,12 @@ def reportar_incidencia():
     with connection.cursor(pymysql.cursors.DictCursor) as cursor:
         # Esta primera consulta vamos a obtener las guardias que se le han asignado al profesor.
         cursor.execute("""
-            SELECT guardias.id_guardia, dias_semanaulas.nombre AS dia, tramos_horarios.horario, aulas.nombre AS aula
-            FROM Guardias guardias
-            JOIN Dias_Semana dias_semana ON guardias.id_dia_guardias = dias_semanaulas.id_dia
-            JOIN Tramos_Horarios tramos_horarios ON guardias.id_tramo_guardias = tramos_horarios.id_tramo
-            LEFT JOIN Aulas aulas ON guardias.id_aula_guardias = aulas.id_aula
-            WHERE guardias.dni_profesor_guardias = %s
+            SELECT Guardias.id_guardia, Dias_Semana.nombre AS dia, Tramos_Horarios.horario, Aulas.nombre AS aula
+            FROM Guardias
+            JOIN Dias_Semana ON Guardias.id_dia_guardias = Dias_Semana.id_dia
+            JOIN Tramos_Horarios ON Guardias.id_tramo_guardias = Tramos_Horarios.id_tramo
+            LEFT JOIN Aulas ON Guardias.id_aula_guardias = Aulas.id_aula
+            WHERE Guardias.dni_profesor_guardias = %s
         """, (session['usuario_dni'],))
         # Guardamos en la variable guardias_profesor el resultado de la consulta que hemos realizado anteriormente
         guardias_profesor = cursor.fetchall()
@@ -601,7 +608,7 @@ def reportar_incidencia():
 
     # Cerramos la conexión con la base de datos
     connection.close()
-    return render_template('reportar_incidenciaulas.html', mensaje=mensaje, guardias=guardias_profesor)
+    return render_template('reportar_incidencia.html', mensaje=mensaje, guardias=guardias_profesor)
 
 # Función para visualizar todas las incidencias que se han realizado
 @app.route('/incidencias/reportadas', methods=['GET'])
@@ -616,13 +623,14 @@ def incidencias_reportadas():
 
     # Esta primera consulta que hacemos en esta función obtenemos las incidencias que se han registrado
     query = """
-        SELECT profesores.nombre AS profesor, guardias.id_dia_guardias, dias_semana.nombre AS dia, guardias.id_tramo_guardias, tramos_horarios.horario, IFNULL(aulas.nombre, 'No especificada') AS aula, incidencias.texto, incidencias.timestamp AS fecha
-        FROM Incidencias incidencias
-        JOIN Guardias guardias ON incidencias.id_guardia_incidencias = guardias.id_guardia
-        JOIN Profesores profesores ON guardias.dni_profesor_guardias = profesores.dni
-        JOIN Dias_Semana dias_semana ON guardias.id_dia_guardias = dias_semana.id_dia
-        JOIN Tramos_Horarios tramos_horarios ON guardias.id_tramo_guardias = tramos_horarios.id_tramo
-        LEFT JOIN Aulas aulas ON guardias.id_aula_guardias = aulas.id_aula
+        SELECT Profesores.nombre AS profesor, Guardias.id_dia_guardias, Dias_Semana.nombre AS dia, Guardias.id_tramo_guardias, Tramos_Horarios.horario, 
+        IFNULL(Aulas.nombre, 'No especificada') AS aula, Incidencias.texto, Incidencias.timestamp AS fecha
+        FROM Incidencias
+        JOIN Guardias ON Incidencias.id_guardia_incidencias = Guardias.id_guardia
+        JOIN Profesores ON Guardias.dni_profesor_guardias = Profesores.dni
+        JOIN Dias_Semana ON Guardias.id_dia_guardias = Dias_Semana.id_dia
+        JOIN Tramos_Horarios ON Guardias.id_tramo_guardias = Tramos_Horarios.id_tramo
+        LEFT JOIN Aulas ON Guardias.id_aula_guardias = Aulas.id_aula
         WHERE 1=1
     """
 
@@ -632,15 +640,15 @@ def incidencias_reportadas():
 
     # En caso de que se indique una fecha de inicio, esto se añade en la consulta
     if fecha_inicio:
-        query += " AND DATE(incidencias.timestamp) >= %s"
+        query += " AND DATE(Incidencias.timestamp) >= %s"
         params.append(fecha_inicio)
     # En caso de que se indique una fecha de fin, esto se añade en la consulta
     if fecha_fin:
-        query += " AND DATE(incidencias.timestamp) <= %s"
+        query += " AND DATE(Incidencias.timestamp) <= %s"
         params.append(fecha_fin)
 
     # Ordenamos todas las incidencias por fecha de maera descendente es decir de la más reciente a la más antigua
-    query += " ORDER BY incidencias.timestamp DESC"
+    query += " ORDER BY Incidencias.timestamp DESC"
 
     # Establecemos la conexión con la base de datos
     connection = get_db_connection()
@@ -688,11 +696,11 @@ def registrar_tarea():
             with connection.cursor(pymysql.cursors.DictCursor) as cursor:
                 # Consulta en la cual vamos a obtener el grupo asociado al horario del profesor que se encuentra ausente
                 cursor.execute("""
-                    SELECT h.id_grupo_horarios
-                    FROM Horarios h
-                    JOIN Ausencias a ON h.dni_profesor_horarios = a.dni_profesor_ausencias
-                                     AND h.id_tramo_horarios = a.id_tramo_ausencias
-                    WHERE a.id_ausencia = %s
+                    SELECT Horarios.id_grupo_horarios
+                    FROM Horarios
+                    JOIN Ausencias ON Horarios.dni_profesor_horarios = Ausencias.dni_profesor_ausencias
+                                     AND Horarios.id_tramo_horarios = Ausencias.id_tramo_ausencias
+                    WHERE Ausencias.id_ausencia = %s
                     LIMIT 1
                 """, (id_ausencia,))
                 resultado = cursor.fetchone()
@@ -721,11 +729,11 @@ def registrar_tarea():
      
     with connection.cursor(pymysql.cursors.DictCursor) as cursor:
         cursor.execute("""
-            SELECT a.id_ausencia, a.fecha, t.horario
-            FROM Ausencias a
-            JOIN Tramos_Horarios t ON a.id_tramo_ausencias = t.id_tramo
-            WHERE a.dni_profesor_ausencias = %s AND a.fecha >= CURDATE()
-            ORDER BY a.fecha, t.id_tramo
+            SELECT Ausencias.id_ausencia, Ausencias.fecha, Tramos_Horarios.horario
+            FROM Ausencias
+            JOIN Tramos_Horarios ON Ausencias.id_tramo_ausencias = Tramos_Horarios.id_tramo
+            WHERE Ausencias.dni_profesor_ausencias = %s AND Ausencias.fecha >= CURDATE()
+            ORDER BY Ausencias.fecha, Tramos_Horarios.id_tramo
         """, (session['usuario_dni'],))
         ausencias = cursor.fetchall()
 
@@ -810,29 +818,34 @@ def comunicar_reincorporacion():
     mensaje = ""
     # Establecemos la conexión con la base de datos
     connection = get_db_connection()
+    # La variable hoy almacena la fecha actual
     hoy = date.today()
 
     with connection.cursor(pymysql.cursors.DictCursor) as cursor:
+        # Consulta en la cual obtenemos todas las ausencias del día de hoy en la cual no se ha comunicado que el profesor@ se ha reincorporado
         cursor.execute("""
-            SELECT ausencias.id_ausencia, tramos_horarios.horario, ausencias.fecha, profesores.nombre, profesores.apellidos
-            FROM Ausencias ausencias
-            JOIN Tramos_Horarios tramos_horarios ON ausencias.id_tramo_ausencias = tramos_horarios.id_tramo
-            JOIN Profesores profesores ON ausencias.dni_profesor_ausencias = profesores.dni
-            WHERE ausencias.fecha = %s AND ausencias.reincorporado_profesor = FALSE
+            SELECT Ausencias.id_ausencia, Tramos_Horarios.horario, Ausencias.fecha, Profesores.nombre, Profesores.apellidos
+            FROM Ausencias
+            JOIN Tramos_Horarios ON Ausencias.id_tramo_ausencias = Tramos_Horarios.id_tramo
+            JOIN Profesores ON Ausencias.dni_profesor_ausencias = Profesores.dni
+            WHERE Ausencias.fecha = %s AND Ausencias.reincorporado_profesor = FALSE
         """, (hoy,))
+        # Guardamos el resultado de la consulta en la variable ausencias
         ausencias = cursor.fetchall()
 
         if request.method == 'POST':
+            # Obtenemos los ids de las ausencias que se han reincorporado
             ids_reincorporados = request.form.getlist('reincorporados')
             for id_aus in ids_reincorporados:
+                # Actualizamos en la tabla Ausencias e indicamos que el profesor se ha reincorporado.
                 cursor.execute("""
-                    UPDATE Ausencias
-                    SET reincorporado_profesor = TRUE
-                    WHERE id_ausencia = %s
+                    UPDATE Ausencias SET reincorporado_profesor = TRUE WHERE id_ausencia = %s
                 """, (id_aus,))
+            # Guardamos los cambios que hemos realizado en la base de datos
             connection.commit()
+            # En caso de que se comunique una reincorporación guardamos en la variable mensaje el siguiente mensaje que se mostrará en texto
             mensaje = "Reincorporación enviada para validación de dirección."
-
+    # Cerramos la conexión con la base de datos
     connection.close()
     return render_template('comunicar_reincorporacion.html', ausencias=ausencias, mensaje=mensaje)
 
@@ -842,43 +855,53 @@ def validar_reincorporacion():
     if 'usuario_dni' not in session:
         return redirect(url_for('login'))
 
+    # Establecemos la conexión con la base de datos.
     connection = get_db_connection()
     # La variable mensaje almacena el mensaje que muestra en pantalla
     mensaje = ""
+    # La variable hoy contiene la fecha actual
     hoy = date.today()
 
     with connection.cursor() as cursor:
+        # Esta primera consulta obtiene el id del perfil del usuario que ha iniciado sesión
         cursor.execute("SELECT id_perfil_profesores FROM Profesores WHERE dni = %s", (session['usuario_dni'],))
+        # El resultado de la consulta lo guardamos en la variable perfil
         perfil = cursor.fetchone()
 
-        if perfil['id_perfil_profesores'] != 2:  # Solo dirección
+        # Si el perfil que hemos obtenido en la consulta anterior no es 2, redireccionamos al usuario a la página home
+        if perfil['id_perfil_profesores'] != 2:
+            # Cerramos la conexión con la base de datos
             connection.close()
             return redirect(url_for('home'))
-    
 
     with connection.cursor(pymysql.cursors.DictCursor) as cursor:
+        # Esta segunda consulta obtiene las ausencias reincorporadas que han sido notificadas pero no han sido validadas.
         cursor.execute("""
-            SELECT a.id_ausencia, p.nombre, p.apellidos, t.horario, a.fecha
-            FROM Ausencias a
-            JOIN Profesores p ON a.dni_profesor_ausencias = p.dni
-            JOIN Tramos_Horarios t ON a.id_tramo_ausencias = t.id_tramo
-            WHERE a.fecha = %s
-              AND a.reincorporado_profesor = TRUE
-              AND a.validacion_direccion = FALSE
+            SELECT Ausencias.id_ausencia, Profesores.nombre, Profesores.apellidos, Tramos_Horarios.horario, Ausencias.fecha
+            FROM Ausencias
+            JOIN Profesores ON Ausencias.dni_profesor_ausencias = Profesores.dni
+            JOIN Tramos_Horarios ON Ausencias.id_tramo_ausencias = Tramos_Horarios.id_tramo
+            WHERE Ausencias.fecha = %s
+              AND Ausencias.reincorporado_profesor = TRUE
+              AND Ausencias.validacion_direccion = FALSE
         """, (hoy,))
+        # El resultado de la consulta lo guardamos en la variable ausencias
         ausencias = cursor.fetchall()
 
         if request.method == 'POST':
             ids_validadas = request.form.getlist('validadas')
             for id_aus in ids_validadas:
+                # Actualizamos la tabla Ausencias en el cual indicamos que la ausencia ya se encuentra validada por Dirección
                 cursor.execute("""
                     UPDATE Ausencias
                     SET validacion_direccion = TRUE
                     WHERE id_ausencia = %s
                 """, (id_aus,))
+            # Guardamos los cambios que hemos realizado en la base de datos.
             connection.commit()
+            # Guardamos en la variable el mensaje que se mostrará cuando las reincorporaciones se validen correctamente
             mensaje = "Reincorporaciones validadas correctamente."
-
+    # Cerramos la conexión con la base de datos
     connection.close()
     return render_template('validar_reincorporacion.html', ausencias=ausencias, mensaje=mensaje)
 

@@ -3,6 +3,7 @@ USE Proyecto_Final;
 INSERT INTO Perfiles (nombre) VALUES
 ('Profesorado'),
 ('Direccion');
+SELECT * FROM Perfiles;
 
 INSERT INTO Profesores (
     dni,

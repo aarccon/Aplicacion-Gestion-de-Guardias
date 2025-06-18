@@ -217,19 +217,14 @@ CREATE TABLE Incidencias (
 );
 
 /** 
-  Tabla Tareas: almacena las tareas dejadas por un profesor ausente para que las realice su grupo.
+  Tabla Tareas: en esta tabla se recogen todas las tareas que crean los profesores cuando se encuentran ausentes para que sean realizadas por los alumnos.
+  La clave primaria es id_tarea, que se genera automaticamente.
 
-  - id_tarea: clave primaria autoincremental.
-  - id_ausencia_tareas: ausencia asociada a la tarea.
-  - id_grupo_tareas: grupo al que se dirige la tarea.
-  - texto: descripción de la tarea.
-  - archivo: posible archivo adjunto relacionado con la tarea (opcional).
-
-  - Restricción UNIQUE para evitar tareas duplicadas para el mismo grupo y ausencia.
-
-  Claves foráneas:
-    - id_ausencia_tareas → referencia a Ausencias(id_ausencia), con borrado en cascada.
-    - id_grupo_tareas → referencia a Grupos(id_grupo).
+  - En la tabla se almacenan los siguientes campos:
+    - id_ausencia_tareas: identificador de la ausencia en la que se indica la tarea por parte del profesorado ausente y como podemos comprobar es una clave foránea que hace referencia a la tabla Ausencias.
+    - id_grupo_tareas: identificador del grupo en el que sucede la ausencia por parte del profesorado ausente y como podemos comprobar es una clave foránea que hace referencia a la tabla Grupos.
+    - texto: igual que sucede cuando un profesor se encuentra ausente o indica una incidencia se indica la información de la incidencia.
+    - archivo: almacena el archivo que puede subir el profesor con la tarea.
 **/
 CREATE TABLE Tareas (
     id_tarea INT AUTO_INCREMENT PRIMARY KEY,
@@ -242,7 +237,18 @@ CREATE TABLE Tareas (
     UNIQUE (id_ausencia_tareas, id_grupo_tareas)
 );
 
--- Tabla Actividades Extraescolares
+/** 
+  Tabla Actividades_Extraescolares: en esta tabla se recogen todas las actividades extraescolares programadas que se realizan fuera y dentro del horario escolar y que afectan a un grupo o a varios grupos.
+  La clave primaria es id_actividad, que se genera automáticamente.
+
+  - En la tabla se almacenan los siguientes campos:
+    - id_grupo_actividades_extraescolares: identificador del grupo al que está asociada la actividad extraescolar. Es una clave foránea que hace referencia a la tabla Grupos.
+    - fecha: fecha en la que se realiza la actividad extraescolar.
+    - id_tramo_actividades_extraescolares: identificador del tramo horario en el que se desarrolla la actividad. Es una clave foránea que hace referencia a la tabla Tramos_Horarios.
+    - dni_profesor_actividades_extraescolares: DNI del profesor responsable o acompañante en la actividad. Es una clave foránea que hace referencia a la tabla Profesores.
+    - afecta_grupo_completo: campo booleano que indica si la actividad afecta a todo el grupo (TRUE) o solo a algunos alumnos (FALSE). Por defecto es FALSE.
+**/
+
 CREATE TABLE Actividades_Extraescolares (
     id_actividad INT AUTO_INCREMENT PRIMARY KEY,
     id_grupo_actividades_extraescolares INT NOT NULL,
